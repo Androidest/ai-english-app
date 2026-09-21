@@ -1,0 +1,64 @@
+.input-editing {
+    background-color: #c1e9f5;
+}
+
+.confirm-editing {
+    background-color: #c1e9f5;
+}
+
+.selected-item {
+    background-color: #eeeeee;
+    border: 2px solid #2196F3;
+}
+
+.selected-item-bg {
+    background-color: #f1f1f1;
+}
+
+.unselected-item {
+    background-color: #f1f1f1;
+    border: 2px solid #f1f1f1;
+
+}
+
+.radio-circle {
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+    border: 2px solid #666;
+    cursor: pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+.radio-circle.selected::after {
+    content:'';
+    width:11px;
+    height:11px;
+    border-radius:50%;
+    background:#2196F3;
+}
+
+.col-vert-center {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important; /* 主轴垂直居中 */
+    height: stretch !important;
+}
+
+.row-click-button {
+    position: absolute !important;
+    inset: 0 !important;
+    width: calc(100% - 60px) !important;
+    height: 100% !important;
+    opacity: 0 !important;
+    z-index: 1 !important;
+}
+
+.clickable-row {
+    cursor: pointer;
+    border-radius:6px;
+}
+.clickable-row:hover {
+    background-color:#e5e6ef;
+}

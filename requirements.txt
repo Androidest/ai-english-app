@@ -1,0 +1,13 @@
+# python=3.10
+langchain-community==0.3.27
+langchain-openai
+langgraph-supervisor
+langgraph==0.5.3
+langgraph-checkpoint==2.1.1
+langgraph-prebuilt==0.5.2
+langgraph-sdk==0.1.73
+gradio==5.42.0
+pywebview
+pandas
+openpyxl
+pydantic
