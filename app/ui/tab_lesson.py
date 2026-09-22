@@ -1,127 +1,134 @@
 import gradio as gr
-from app.utils.llm_config import LLMConfig
-from app.utils.paths import PATH_LLMS
+from app.utils.paths import PATH_LESSONS
+from app.utils.sheet import Sheet
 import json
-import time
 
-PATH_CUR_LLM = PATH_LLMS / "cur_llm.txt"
+def get_lesson_meta(sheet: Sheet) -> dict:
+    # TODO
+    return {
+        "test": "test", 
+    }
 
-def load_llm_configs() -> tuple[list[dict], int]:
-    configs: list[dict] = []
+def generate_lesson(sheet: Sheet):
+    # TODO
+    sheet[0, "EN"] = "hello"
+    sheet[0, "CN"] = "你好"
+    sheet[0, "ID"] = "halo"
 
-    if PATH_LLMS.exists():
-        for file_path in PATH_LLMS.rglob(f"*.json"):
-            with open(file_path, "r", encoding="utf-8") as f:
-                config = LLMConfig.model_validate_json(f.read())
-                config_dict = config.model_dump()
-                config_dict["editing"] = False
-                config_dict["error"] = ""
-                config_dict["id"] = file_path.stem
-                configs.append(config_dict)
+def load_lessons() -> tuple:
+    lessons_meta: dict = {} # meta is for fast access to some breif info of each lesson without loading all the sheets
+    lessons: dict = {} # contains the full info of each lesson including handlers of sheets and meta
+    cur_lesson: str = None
 
-        sorted(configs, key=lambda x: x["id"])
+    if PATH_LESSONS.exists():
+        # load meta info
+        meta_path = PATH_LESSONS/"meta.json"
+        if meta_path.exists():
+            with open(meta_path, "r", encoding="utf-8") as f:
+                meta = json.load(f)
+                cur_lesson = meta["cur_lesson"]
+                lessons_meta = meta["lessons_meta"]
 
-    if PATH_CUR_LLM.exists():
-        with open(PATH_CUR_LLM, "r", encoding="utf-8") as f:
-            cur_llm = int(f.read())
-    else:
-        if len(configs) > 0:
-            cur_llm = 0
-        else:
-            cur_llm = -1
+        # load lesson excel files
+        for file_path in PATH_LESSONS.rglob(f"*.xlsx"):
+            lesson_name = file_path.stem
+            lessons[lesson_name] = { 
+                "name": lesson_name,
+                "sheet": None,
+                "meta": lessons_meta.get(lesson_name, None),
+            }
 
-    return configs, cur_llm
+            # Load the lesson meta and sheet only when the meta is missing.
+            if lessons[lesson_name]["meta"] is None:
+                sheet = Sheet(file_path)
+                lessons[lesson_name]["sheet"] = sheet
+                lessons[lesson_name]["meta"] = get_lesson_meta(sheet)
 
-def save_llm_configs(item: dict):
-    if not PATH_LLMS.exists():
-        PATH_LLMS.mkdir(parents=True, exist_ok=True)
+    return lessons, cur_lesson
 
-    with open(f"{PATH_LLMS}/{item['id']}.json", "w", encoding="utf-8") as f:
-        config = LLMConfig.model_validate(item)
-        f.write(json.dumps(config.model_dump(), ensure_ascii=False, indent=4))
+def save_lesson_sheet(lessons: dict, lesson_name: str):
+    if not PATH_LESSONS.exists():
+        PATH_LESSONS.mkdir(parents=True, exist_ok=True)
 
-def save_cur_llm(cur_llm: int):
-    with open(PATH_CUR_LLM, "w", encoding="utf-8") as f:
-        f.write(str(cur_llm))
+    # save lesson sheet
+    sheet : Sheet = lessons[lesson_name]["sheet"]
+    if sheet is None:
+        raise ValueError("Sheet sheet is None")
+    
+    sheet.save()
 
-def on_click_edit(i, old_items):
-    new_items = [i.copy() for i in old_items]
-    new_items[i]["editing"] = True
-    return new_items
-
-def on_confirm_edit(i, alias_text, model_text, base_url_text, api_key_text, old_items):
-    # 复制旧列表，避免原地修改state
-    new_items = [i.copy() for i in old_items]
-    new_items[i]["alias"] = alias_text
-    new_items[i]["model"] = model_text
-    new_items[i]["base_url"] = base_url_text
-    new_items[i]["api_key"] = api_key_text 
-
-    if new_items[i]["alias"] == "":
-            new_items[i]["error"] = "Alias is required"
-            return new_items
-
-    if new_items[i]["model"] == "":
-        new_items[i]["error"] = "Model is required"
-        return new_items
-        
-    if new_items[i]["base_url"] == "":
-        new_items[i]["error"] = "Base URL is required"
-        return new_items
-        
-    if new_items[i]["api_key"] == "":
-        new_items[i]["error"] = "API Key is required"
-        return new_items
-        
-    # save the config to file with timestamp as id and filename
-    if "id" not in new_items[i] or new_items[i]["id"] == "":
-        new_items[i]["id"] = str(int(time.time())) 
-
-    save_llm_configs(new_items[i])
-
-    new_items[i]["editing"] = False
-    new_items[i]["error"] = ""
-    return new_items
-
-def on_cancel_edit(i, old_items):
-    new_items = old_items.copy()
-    new_items[i]["editing"] = False
-    new_items[i]["error"] = ""
-    return new_items
-
-def on_delete_item(i, old_items):
-    path = PATH_LLMS / f"{old_items[i]['id']}.json"
+def delete_lesson_sheet(lesson_name: str):
+    path = PATH_LESSONS / f"{lesson_name}.xlsx"
     if path.exists():
         path.unlink()
 
-    new_items = old_items.copy()
-    new_items.pop(i)
+def save_lessons_meta(lessons: dict):
+    if not PATH_LESSONS.exists():
+        PATH_LESSONS.mkdir(parents=True, exist_ok=True)
+
+    # save lesson meta
+    new_meta = {}
+    for lesson_name, lesson in lessons.items():
+        new_meta[lesson_name] = lesson["meta"]
+
+    with open(PATH_LESSONS/"meta.json", "w", encoding="utf-8") as f:
+        json.dump(new_meta, f, ensure_ascii=False, indent=4)
+
+def on_delete_lesson(old_lessons: dict, lesson_name: str):
+    new_lessons = old_lessons.copy()
+    del new_lessons[lesson_name]
+
+    # update lesson files
+    delete_lesson_sheet(lesson_name)
+    save_lessons_meta(new_lessons)
+
+    return new_lessons
+
+def on_add_lesson(old_lessons: dict, lesson_name: str):
+    # generate lesson data
+    sheet = Sheet(PATH_LESSONS / f"{lesson_name}.xlsx", default_data={'EN':[], 'CN':[], 'ID':[]}, dtype=str)
+
+    generate_lesson(sheet)
+
+    new_items = old_lessons.copy()
+    new_items[lesson_name] = { 
+        "name": lesson_name,
+        "sheet": sheet,
+        "meta": get_lesson_meta(sheet),
+    }
+
+    # update lesson files
+    save_lesson_sheet(new_items, lesson_name)
+    save_lessons_meta(new_items)
 
     return new_items
 
-def on_add_new_item(old_items):
-    item: dict = LLMConfig(alias="", model="", base_url="", api_key="").model_dump()
-    item["editing"] = True
-    new_items = old_items.copy()
-    new_items.append(item)
-    return new_items
+def on_choose_lesson(lesson_name: str, old_lessons: dict, old_cur_lesson: str):
+    new_cur_lesson = lesson_name
 
-def on_click_item(i, items, old_cur_llm):
-    if items[i]["editing"]:
-        new_items = items.copy()
-        new_items[i]["error"] = "Cannot choose this LLM while editing"
-        return old_cur_llm, new_items
+    # check if the lesson exists
+    if lesson_name not in old_lessons:
+        raise ValueError(f"Lesson {lesson_name} does not exist")
 
-    save_cur_llm(i)
-    return i, items
+    # update lesson sheet
+    if old_lessons[lesson_name].get("sheet", None) is None:
+        path = PATH_LESSONS / f"{lesson_name}.xlsx"
+        if not path.exists():
+            raise ValueError(f"Lesson {lesson_name} does not exist")
 
-def render_tab_ai(state_llm_configs: gr.State, state_cur_llm: gr.State):
-    with gr.Tab("AIs") as tab_ai:
+        new_lessons = old_lessons.copy()
+        new_lessons[lesson_name]["sheet"] = Sheet(path)
+        return new_lessons, new_cur_lesson
+
+    return old_lessons, new_cur_lesson
+
+def render_tab_lesson(state_lessons: gr.State, state_curlesson: gr.State):
+    with gr.Tab("Lessons") as tab_lesson:
         
-        # list of llms
-        @gr.render(inputs=[state_llm_configs, state_cur_llm])
-        def render_items(items: list[dict], cur_llm: int):
-            # render all the llm config items
+        # list of lessons
+        @gr.render(inputs=[state_lessons, state_curlesson])
+        def render_items(items: list[dict], cur_lesson: str):
+            # render all the lesson items
             for idx, item in enumerate(items):
 
                 # data
@@ -207,7 +214,7 @@ def render_tab_ai(state_llm_configs: gr.State, state_cur_llm: gr.State):
                                 # both have delete button
                                 del_btn = gr.Button("🗑️", variant="stop")
                                 del_btn.click(
-                                    on_delete_item, 
+                                    on_delete_lesson, 
                                     inputs=[gr.State(idx), state_llm_configs], 
                                     outputs=[state_llm_configs],
                                 ) 

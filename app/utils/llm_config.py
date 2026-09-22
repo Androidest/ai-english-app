@@ -23,8 +23,8 @@ if __name__ == "__main__":
             json.dump(
                 test.model_dump(),
                 f,
-                ensure_ascii=False,  # 中文不转义
-                indent=2             # 格式化缩进
+                ensure_ascii=False,  
+                indent=4            
             )
     
 
