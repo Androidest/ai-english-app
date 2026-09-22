@@ -22,12 +22,7 @@ def load_lessons() -> tuple:
 
     if PATH_LESSONS.exists():
         # load meta info
-        meta_path = PATH_LESSONS/"meta.json"
-        if meta_path.exists():
-            with open(meta_path, "r", encoding="utf-8") as f:
-                meta = json.load(f)
-                cur_lesson = meta["cur_lesson"]
-                lessons_meta = meta["lessons_meta"]
+        lessons_meta, cur_lesson = load_meta()
 
         # load lesson excel files
         for file_path in PATH_LESSONS.rglob(f"*.xlsx"):
@@ -62,25 +57,39 @@ def delete_lesson_sheet(lesson_name: str):
     if path.exists():
         path.unlink()
 
-def save_lessons_meta(lessons: dict):
+def load_meta() -> tuple:
+    cur_lesson = -1
+    lessons_meta = {}
+
+    meta_path = PATH_LESSONS/"meta.json"
+    if meta_path.exists():
+        with open(meta_path, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+            cur_lesson = meta["cur_lesson"]
+            lessons_meta = meta["lessons_meta"]
+
+    return lessons_meta, cur_lesson
+
+def save_meta(lessons: dict, cur_lesson: str):
     if not PATH_LESSONS.exists():
         PATH_LESSONS.mkdir(parents=True, exist_ok=True)
 
-    # save lesson meta
-    new_meta = {}
-    for lesson_name, lesson in lessons.items():
-        new_meta[lesson_name] = lesson["meta"]
+    # save meta
+    new_meta = {
+        "cur_lesson": cur_lesson,
+        "lessons_meta": { lesson_name: lesson["meta"] for lesson_name, lesson in lessons.items() },
+    }
 
     with open(PATH_LESSONS/"meta.json", "w", encoding="utf-8") as f:
         json.dump(new_meta, f, ensure_ascii=False, indent=4)
 
-def on_delete_lesson(old_lessons: dict, lesson_name: str):
+def on_delete_lesson(old_lessons: dict, cur_lesson: str):
     new_lessons = old_lessons.copy()
-    del new_lessons[lesson_name]
+    del new_lessons[cur_lesson]
 
     # update lesson files
-    delete_lesson_sheet(lesson_name)
-    save_lessons_meta(new_lessons)
+    delete_lesson_sheet(cur_lesson)
+    save_meta(new_lessons, cur_lesson)
 
     return new_lessons
 
@@ -90,18 +99,19 @@ def on_add_lesson(old_lessons: dict, lesson_name: str):
 
     generate_lesson(sheet)
 
-    new_items = old_lessons.copy()
-    new_items[lesson_name] = { 
+    new_lessons = old_lessons.copy()
+    new_lessons[lesson_name] = { 
         "name": lesson_name,
         "sheet": sheet,
         "meta": get_lesson_meta(sheet),
     }
 
     # update lesson files
-    save_lesson_sheet(new_items, lesson_name)
-    save_lessons_meta(new_items)
+    new_cur_lesson = lesson_name
+    save_lesson_sheet(new_lessons, new_cur_lesson)
+    save_meta(new_lessons, new_cur_lesson)
 
-    return new_items
+    return new_lessons, new_cur_lesson
 
 def on_choose_lesson(lesson_name: str, old_lessons: dict, old_cur_lesson: str):
     new_cur_lesson = lesson_name
@@ -122,108 +132,109 @@ def on_choose_lesson(lesson_name: str, old_lessons: dict, old_cur_lesson: str):
 
     return old_lessons, new_cur_lesson
 
-def render_tab_lesson(state_lessons: gr.State, state_curlesson: gr.State):
-    with gr.Tab("Lessons") as tab_lesson:
+# TODO
+# def render_tab_lesson(state_lessons: gr.State, state_curlesson: gr.State):
+#     with gr.Tab("Lessons") as tab_lesson:
         
-        # list of lessons
-        @gr.render(inputs=[state_lessons, state_curlesson])
-        def render_items(items: list[dict], cur_lesson: str):
-            # render all the lesson items
-            for idx, item in enumerate(items):
+#         # list of lessons
+#         @gr.render(inputs=[state_lessons, state_curlesson])
+#         def render_items(items: list[dict], cur_lesson: str):
+#             # render all the lesson items
+#             for idx, item in enumerate(items):
 
-                # data
-                alias = item.get("alias", "")
-                model = item.get("model", "")
-                base_url = item.get("base_url", "")
-                api_key = item.get("api_key", "")
-                is_editing = item.get("editing", False)
-                error = item.get("error", "")
-                is_selected = idx == cur_llm
+#                 # data
+#                 alias = item.get("alias", "")
+#                 model = item.get("model", "")
+#                 base_url = item.get("base_url", "")
+#                 api_key = item.get("api_key", "")
+#                 is_editing = item.get("editing", False)
+#                 error = item.get("error", "")
+#                 is_selected = idx == cur_llm
 
-                # css classes for item card and button panel
-                item_row_classes = ["unselected-item", "clickable-row"]
-                item_btn_panel_classes = ["unselected-item", "col-vert-center"]
-                if is_selected:
-                    item_row_classes = ["selected-item"]
-                    item_btn_panel_classes = ["selected-item-bg", "col-vert-center"]
+#                 # css classes for item card and button panel
+#                 item_row_classes = ["unselected-item", "clickable-row"]
+#                 item_btn_panel_classes = ["unselected-item", "col-vert-center"]
+#                 if is_selected:
+#                     item_row_classes = ["selected-item"]
+#                     item_btn_panel_classes = ["selected-item-bg", "col-vert-center"]
 
-                # item card for each llm config
-                with gr.Row(variant="panel", elem_classes=item_row_classes):
+#                 # item card for each llm config
+#                 with gr.Row(variant="panel", elem_classes=item_row_classes):
 
-                    # invisible button to trigger click event for the entire item card
-                    row_click = gr.Button("", elem_classes=["row-click-button"])
-                    row_click.click(
-                        on_click_item,
-                        inputs=[gr.State(idx), state_llm_configs,  state_cur_llm],
-                        outputs=[state_cur_llm, state_llm_configs],
-                    )
+#                     # invisible button to trigger click event for the entire item card
+#                     row_click = gr.Button("", elem_classes=["row-click-button"])
+#                     row_click.click(
+#                         on_click_item,
+#                         inputs=[gr.State(idx), state_llm_configs,  state_cur_llm],
+#                         outputs=[state_cur_llm, state_llm_configs],
+#                     )
 
-                    # radio circle to display the selected item
-                    with gr.Column(scale=0, min_width=60, elem_classes="col-vert-center"):
-                        class_name = "radio-circle selected" if is_selected else "radio-circle"
-                        circle_html = gr.HTML(
-                            value=f'<div class="{class_name}" data-row="{idx}"></div>',
-                            elem_id=f"circle_{idx}"
-                        )   
+#                     # radio circle to display the selected item
+#                     with gr.Column(scale=0, min_width=60, elem_classes="col-vert-center"):
+#                         class_name = "radio-circle selected" if is_selected else "radio-circle"
+#                         circle_html = gr.HTML(
+#                             value=f'<div class="{class_name}" data-row="{idx}"></div>',
+#                             elem_id=f"circle_{idx}"
+#                         )   
 
-                    # llm config panel
-                    with gr.Column(scale=20):
-                        with gr.Row():
-                            # editing mode
-                            if is_editing:
-                                alias_in = gr.Textbox(value=alias, label="Alias", elem_classes="input-editing", interactive=True)
-                                model_in = gr.Textbox(value=model, label="Model", elem_classes="input-editing", interactive=True)
-                                base_url_in = gr.Textbox(value=base_url, label="Base URL", elem_classes="input-editing", interactive=True)
-                                api_key_in = gr.Textbox(value=api_key, label="API Key", elem_classes="input-editing", interactive=True)
+#                     # llm config panel
+#                     with gr.Column(scale=20):
+#                         with gr.Row():
+#                             # editing mode
+#                             if is_editing:
+#                                 alias_in = gr.Textbox(value=alias, label="Alias", elem_classes="input-editing", interactive=True)
+#                                 model_in = gr.Textbox(value=model, label="Model", elem_classes="input-editing", interactive=True)
+#                                 base_url_in = gr.Textbox(value=base_url, label="Base URL", elem_classes="input-editing", interactive=True)
+#                                 api_key_in = gr.Textbox(value=api_key, label="API Key", elem_classes="input-editing", interactive=True)
                             
-                            # non-edit mode
-                            else: 
-                                gr.Text(value=item.get("alias", ""), label="Alias")
-                                gr.Text(value=item.get("model", ""), label="Model")
-                                gr.Text(value=item.get("base_url", ""), label="Base URL")
-                                gr.Text(value=item.get("api_key", ""), label="API Key")
+#                             # non-edit mode
+#                             else: 
+#                                 gr.Text(value=item.get("alias", ""), label="Alias")
+#                                 gr.Text(value=item.get("model", ""), label="Model")
+#                                 gr.Text(value=item.get("base_url", ""), label="Base URL")
+#                                 gr.Text(value=item.get("api_key", ""), label="API Key")
 
-                        if error:
-                            gr.Markdown(f'<span style="color:red;">Error: {error}</span>')
+#                         if error:
+#                             gr.Markdown(f'<span style="color:red;">Error: {error}</span>')
 
-                    # button panel
-                    with gr.Column(scale=0, min_width=60, elem_classes=item_btn_panel_classes):
-                        if not is_selected:
-                            if is_editing:
-                                confirm_btn = gr.Button("✅", elem_classes="confirm-editing")
-                                confirm_btn.click(
-                                    on_confirm_edit, 
-                                    inputs=[gr.State(idx), alias_in, model_in, base_url_in, api_key_in, state_llm_configs],
-                                    outputs=[state_llm_configs]
-                                )
+#                     # button panel
+#                     with gr.Column(scale=0, min_width=60, elem_classes=item_btn_panel_classes):
+#                         if not is_selected:
+#                             if is_editing:
+#                                 confirm_btn = gr.Button("✅", elem_classes="confirm-editing")
+#                                 confirm_btn.click(
+#                                     on_confirm_edit, 
+#                                     inputs=[gr.State(idx), alias_in, model_in, base_url_in, api_key_in, state_llm_configs],
+#                                     outputs=[state_llm_configs]
+#                                 )
 
-                                del_btn = gr.Button("↩", variant="secondary")
-                                del_btn.click(
-                                    on_cancel_edit, 
-                                    inputs=[gr.State(idx), state_llm_configs], 
-                                    outputs=[state_llm_configs],
-                                ) 
-                            else:
-                                edit_btn = gr.Button("✏️", variant="secondary")
-                                edit_btn.click(
-                                    on_click_edit, 
-                                    inputs=[gr.State(idx), state_llm_configs], 
-                                    outputs=[state_llm_configs]
-                                )
+#                                 del_btn = gr.Button("↩", variant="secondary")
+#                                 del_btn.click(
+#                                     on_cancel_edit, 
+#                                     inputs=[gr.State(idx), state_llm_configs], 
+#                                     outputs=[state_llm_configs],
+#                                 ) 
+#                             else:
+#                                 edit_btn = gr.Button("✏️", variant="secondary")
+#                                 edit_btn.click(
+#                                     on_click_edit, 
+#                                     inputs=[gr.State(idx), state_llm_configs], 
+#                                     outputs=[state_llm_configs]
+#                                 )
 
-                                # both have delete button
-                                del_btn = gr.Button("🗑️", variant="stop")
-                                del_btn.click(
-                                    on_delete_lesson, 
-                                    inputs=[gr.State(idx), state_llm_configs], 
-                                    outputs=[state_llm_configs],
-                                ) 
-                        else:
-                            gr.Markdown('<span style="color:green; font-weight:bold;">Using</span>')
+#                                 # both have delete button
+#                                 del_btn = gr.Button("🗑️", variant="stop")
+#                                 del_btn.click(
+#                                     on_delete_lesson, 
+#                                     inputs=[gr.State(idx), state_llm_configs], 
+#                                     outputs=[state_llm_configs],
+#                                 ) 
+#                         else:
+#                             gr.Markdown('<span style="color:green; font-weight:bold;">Using</span>')
 
 
-            # the last item is the add button
-            add_btn = gr.Button("➕ Add", variant="secondary") 
-            add_btn.click(on_add_new_item, inputs=[state_llm_configs], outputs=[state_llm_configs])
+#             # the last item is the add button
+#             add_btn = gr.Button("➕ Add", variant="secondary") 
+#             add_btn.click(on_add_new_item, inputs=[state_llm_configs], outputs=[state_llm_configs])
 
             
