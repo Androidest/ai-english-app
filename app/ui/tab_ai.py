@@ -134,7 +134,7 @@ def render_tab_ai(state_llm_configs: gr.State, state_cur_llm: gr.State):
                 is_selected = idx == cur_llm
 
                 # css classes for item card and button panel
-                item_row_classes = ["unselected-item", "clickable-row"]
+                item_row_classes = ["unselected-item", "clickable-item"]
                 item_btn_panel_classes = ["unselected-item", "col-vert-center"]
                 if is_selected:
                     item_row_classes = ["selected-item"]

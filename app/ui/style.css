@@ -42,8 +42,15 @@
 .col-vert-center {
     display: flex !important;
     flex-direction: column !important;
-    justify-content: center !important; /* 主轴垂直居中 */
+    justify-content: center !important;
     height: stretch !important;
+}
+
+.row-vert-center {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: center !important; 
+    width: stretch !important;
 }
 
 .row-click-button {
@@ -55,10 +62,29 @@
     z-index: 1 !important;
 }
 
-.clickable-row {
+.lesson-click-button {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    opacity: 0 !important;
+    z-index: 1 !important;
+}
+
+.clickable-item {
     cursor: pointer;
     border-radius:6px;
 }
-.clickable-row:hover {
+
+.clickable-item:hover {
     background-color:#e5e6ef;
+}
+
+.lesson-button {
+    width: 120px !important;
+    height: 150px !important;
+}
+
+.lesson-item {
+    background-color:#f1f1f1;;
 }
