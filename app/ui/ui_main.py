@@ -19,6 +19,7 @@ with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for
     def on_load():
         llm_configs, cur_llm = load_llm_configs()
         lessons, cur_lesson = load_lessons()
+        print("Loading Finished")
 
         return (
             llm_configs, 

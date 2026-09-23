@@ -18,12 +18,13 @@ def generate_lesson(sheet: Sheet):
 def load_lessons() -> tuple:
     lessons_meta: dict = {} # meta is for fast access to some breif info of each lesson without loading all the sheets
     lessons: dict = {} # contains the full info of each lesson including handlers of sheets and meta
-    cur_lesson: str = None
+    cur_lesson: str = -1
 
     if PATH_LESSONS.exists():
         # load meta info
         lessons_meta, cur_lesson = load_meta()
 
+        has_missing_meta = False
         # load lesson excel files
         for file_path in PATH_LESSONS.rglob(f"*.xlsx"):
             lesson_name = file_path.stem
@@ -38,6 +39,10 @@ def load_lessons() -> tuple:
                 sheet = Sheet(file_path)
                 lessons[lesson_name]["sheet"] = sheet
                 lessons[lesson_name]["meta"] = get_lesson_meta(sheet)
+                has_missing_meta = True
+
+        if has_missing_meta:
+            save_meta(lessons, cur_lesson)
 
     return lessons, cur_lesson
 
@@ -118,6 +123,7 @@ def on_click_add_lesson():
     return
 
 def on_choose_lesson(lesson_name: str, old_lessons: dict):
+    print(f"Choose lesson: {lesson_name}")
     new_cur_lesson = lesson_name
 
     # check if the lesson exists
@@ -170,23 +176,29 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                     meta = lesson.get("meta", None)
 
                     # list item: lesson entry card
-                    with gr.Column(variant="panel", elem_classes=["clickable-item", "lesson-button", "lesson-item"], min_width=120, scale=0):
+                    with gr.Column(variant="panel", elem_classes=["clickable-item", "lesson-item", "lesson-item-bg"], scale=0):
 
                         # invisible button to trigger click event for the entire item card
+                        with gr.Row(scale=0, elem_classes=["lesson-name-wrapper"]):
+                            gr.Markdown(f"### {lesson_name}", elem_classes=["lesson-name"], scale=0, line_breaks=True)
+                            item_btn1 = gr.Button("", elem_classes=["lesson-click-button"])
+                            item_btn1.click(
+                                on_choose_lesson,
+                                inputs=[gr.State(lesson_name), state_lessons],
+                                outputs=[state_lessons, state_cur_lesson],
+                            )
+
+                        gr.Markdown(f"{meta['test']}", elem_classes=["lesson-meta"], scale=0, line_breaks=True)
+
                         item_btn = gr.Button("", elem_classes=["lesson-click-button"])
                         item_btn.click(
                             on_choose_lesson,
                             inputs=[gr.State(lesson_name), state_lessons],
                             outputs=[state_lessons, state_cur_lesson],
                         )
-
-                        # with gr.Row(scale=0, elem_classes="col-vert-center"):
-                        gr.Markdown(f"### {lesson_name}", scale=0, height=70, min_width=120)
                         
-                        gr.Markdown(f"{meta['test']}", scale=0, height=30, min_width=120)
-
-                with gr.Column(variant="panel", elem_classes=["lesson-button"], min_width=120, scale=0):
+                with gr.Column(variant="panel", elem_classes=["lesson-item"], scale=0):
                     # the last item is the add button
-                    add_btn = gr.Button("➕", variant="secondary", elem_classes=["lesson-button"]) 
+                    add_btn = gr.Button("➕", variant="secondary", elem_classes=["lesson-item"]) 
                     add_btn.click(on_click_add_lesson, inputs=[], outputs=[])
             
