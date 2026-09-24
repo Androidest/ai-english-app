@@ -175,3 +175,7 @@
     border: none !important;
     padding: 0 !important;
 }
+
+.script {
+    display: none;
+}

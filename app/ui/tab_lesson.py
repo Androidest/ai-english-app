@@ -243,4 +243,4 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                                     words.append(punctuation)
                                     gr.Textbox(punctuation, max_lines=1, scale=0, min_width=10, container=False, elem_classes=["word", "punctuation"], interactive=False)
 
-                        gr.HTML(f"", js_on_load=f'window.resizeWordTextboxes({words})')
+                            gr.HTML(f"", elem_classes=["script"], js_on_load=f'window.resizeWordTextboxes({words})')
