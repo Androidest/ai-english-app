@@ -164,11 +164,6 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
         @gr.render(inputs=[state_lessons, state_cur_lesson, state_llm_configs, state_cur_llm])
         def render_items(lessons: dict, cur_lesson: str, llm_configs: list[dict], cur_llm: int):   
 
-            # cur_llm_name = "-- Not Selected --"
-            # if cur_llm != -1 and len(llm_configs) > cur_llm:
-            #     cur_llm_name = llm_configs[cur_llm]["alias"]
-            # gr.Text(cur_llm_name, label="Current AI")
-
             if cur_lesson == None:
                 with gr.Row():
                     # list of lessons
@@ -214,6 +209,7 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                 sheet = lessons[cur_lesson]["sheet"]
                 meta = lessons[cur_lesson]["meta"]
                 progress_idx = meta["progress_idx"]
+                
 
                 with gr.Row():
                     exit_btn = gr.Button("↩", variant="secondary", size="sm", elem_classes=["exit-button"])
@@ -221,14 +217,30 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
 
                     gr.Markdown(f"## Lesson: {cur_lesson}", elem_classes=["lesson-title"])
 
-                with gr.Column(elem_classes=["lesson-content"]):
-                    print(progress_idx)
-                    en = sheet[progress_idx, "EN"]
-                    cn = sheet[progress_idx, "CN"]
-                    id = sheet[progress_idx, "ID"]
-                    
-                    gr.Markdown(f"##  {cn}", elem_classes=["lesson-title"])
-                    gr.Markdown(f"##  {id}", elem_classes=["lesson-title"])
-                    gr.Markdown(f"##  {en}", elem_classes=["lesson-title"])
-                    
+                with gr.Row():
+                    with gr.Column(elem_classes=["lesson-content"]):
+                        en = sheet[progress_idx, "EN"]
+                        cn = sheet[progress_idx, "CN"]
+                        id = sheet[progress_idx, "ID"]
+                        
+                        gr.Markdown(f"{cn}", elem_classes=["phrase"], scale=0, min_width=10)
+                        gr.Markdown(f"{id}", elem_classes=["phrase"], scale=0, min_width=10)
 
+                        words = []
+                        with gr.Row(elem_classes=["lesson-content"]) as row:
+                            for i, word in enumerate(en.split(' ')):
+                                word = word.strip()
+                                punctuation = ""
+
+                                if not word[-1].isalpha() and word[-1] != "'":
+                                    punctuation = word[-1]
+                                    word = word[:-1]
+
+                                words.append(word)
+                                gr.Textbox(word, max_lines=1, scale=0, min_width=10, container=False, elem_classes=["word"], interactive=True)
+
+                                if punctuation != "":
+                                    words.append(punctuation)
+                                    gr.Textbox(punctuation, max_lines=1, scale=0, min_width=10, container=False, elem_classes=["word", "punctuation"], interactive=False)
+
+                        gr.HTML(f"", js_on_load=f'window.resizeWordTextboxes({words})')

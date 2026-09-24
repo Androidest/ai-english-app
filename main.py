@@ -19,9 +19,14 @@ if __name__ == "__main__":
     with open(PATH_CSS, "r", encoding="utf-8") as f:
         external_css = f.read()
 
+    with open(PATH_JS, "r", encoding="utf-8") as f:
+        external_js = f.read()
+        print(external_js)
+
     demo.launch(
         server_name=config.HOST, 
         server_port=config.PORT, 
         inbrowser=True,
         css=external_css,
+        js=external_js,
     )

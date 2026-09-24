@@ -151,3 +151,27 @@
     align-items: center;
     justify-content: center;
 }
+
+.phrase p {
+    text-align: center;
+    font-size: 50px !important;
+    color: #452e6b !important;
+}
+
+.word {
+    border: 0 !important;
+}
+
+.word input {
+    font-size: 35px !important;
+    color: #4783c7 !important;
+    border: none !important;
+    border-bottom: 2px solid #2f3134 !important;
+}
+
+.punctuation input {
+    font-size: 35px !important;
+    color: #4783c7 !important;
+    border: none !important;
+    padding: 0 !important;
+}
