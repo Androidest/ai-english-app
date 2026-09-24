@@ -154,8 +154,10 @@ def on_choose_lesson(lesson_name: str, old_lessons: dict):
     save_meta(new_lessons, new_cur_lesson)
     return new_lessons, new_cur_lesson
 
-def on_exit_lesson():
-    return None # cur_lesson is None when no lesson is selected, back to the lessons list
+def on_exit_lesson(lessons: dict):
+    cur_lesson = None
+    save_meta(lessons, cur_lesson)
+    return cur_lesson # cur_lesson is None when no lesson is selected, back to the lessons list
 
 def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state_llm_configs: gr.State, state_cur_llm: gr.State):
 
@@ -213,7 +215,7 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
 
                 with gr.Row():
                     exit_btn = gr.Button("↩", variant="secondary", size="sm", elem_classes=["exit-button"])
-                    exit_btn.click(on_exit_lesson, inputs=[], outputs=[state_cur_lesson])
+                    exit_btn.click(on_exit_lesson, inputs=[state_lessons], outputs=[state_cur_lesson])
 
                     gr.Markdown(f"## Lesson: {cur_lesson}", elem_classes=["lesson-title"])
 
