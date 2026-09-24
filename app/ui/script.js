@@ -23,7 +23,6 @@ window.resizeWordTextboxes = function (words) {
         const width = Math.ceil(textWidth);
 
         container.style.minWidth = `min(calc(${width}px + ${style.paddingLeft} + ${style.paddingRight}), 100%)`;
-        console.log(container.style.minWidth);
     }
 };
 

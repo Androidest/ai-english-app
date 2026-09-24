@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
     with open(PATH_JS, "r", encoding="utf-8") as f:
         external_js = f.read()
-        print(external_js)
+        # print(external_js)
 
     demo.launch(
         server_name=config.HOST, 
