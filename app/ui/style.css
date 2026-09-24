@@ -52,13 +52,6 @@
     height: stretch !important;
 }
 
-.row-vert-center {
-    display: flex !important;
-    flex-direction: row !important;
-    justify-content: center !important; 
-    width: stretch !important;
-}
-
 .row-click-button {
     position: absolute !important;
     inset: 0 !important;
@@ -154,22 +147,55 @@
 
 .phrase p {
     text-align: center;
-    font-size: 50px !important;
+    font-size: 40px !important;
     color: #452e6b !important;
+}
+
+.phrase-en {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
 }
 
 .word {
     border: 0 !important;
 }
 
-.word input {
+.w-partial input {
     font-size: 35px !important;
     color: #4783c7 !important;
     border: none !important;
-    border-bottom: 2px solid #2f3134 !important;
+    border-bottom: 2px solid #4783c7 !important;
+    padding: 3px !important;
 }
 
-.punctuation input {
+.w-partial_cap input {
+    font-size: 35px !important;
+    color: #030303 !important;
+    border: none !important;
+    border-bottom: 2px solid #000000 !important;
+    padding: 3px !important;
+}
+
+.w-correct input {
+    font-size: 35px !important;
+    color: #47c7b8 !important;
+    border: none !important;
+    border-bottom: 2px solid #47c7b8 !important;
+    padding: 3px !important;
+}
+
+.w-incorrect input {
+    font-size: 35px !important;
+    color: #e39696 !important;
+    border: none !important;
+    border-bottom: 2px solid #e39696 !important;
+    padding: 3px !important;
+}
+
+.w-punct input {
     font-size: 35px !important;
     color: #4783c7 !important;
     border: none !important;

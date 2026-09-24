@@ -3,6 +3,11 @@ from app.utils.paths import PATH_LESSONS
 from app.utils.sheet import Sheet
 import json
 
+INCORRECT = 0
+PARTIALLY_CORRECT_CAP = 1
+PARTIALLY_CORRECT = 2
+FULLY_CORRECT = 3
+
 def get_lesson_meta(sheet: Sheet, progress_idx: int = 0) -> dict:
     # TODO
     return {
@@ -159,12 +164,29 @@ def on_exit_lesson(lessons: dict):
     save_meta(lessons, cur_lesson)
     return cur_lesson # cur_lesson is None when no lesson is selected, back to the lessons list
 
+def on_change_word(input: str, i: int, words: list[str], word_flags: list[int]) -> list[int]:
+    if word_flags == None:
+        word_flags = [ INCORRECT for _ in range(len(words)) ]
+
+    if len(input) > 0 and words[i][:len(input)].lower() == input.lower():
+        if len(input) == len(words[i]) and input == words[i]:
+            word_flags[i] = FULLY_CORRECT
+        elif words[i][:len(input)] == input:
+            word_flags[i] = PARTIALLY_CORRECT
+        else:
+            word_flags[i] = PARTIALLY_CORRECT_CAP
+    else:
+        word_flags[i] = INCORRECT
+
+    return word_flags
+
 def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state_llm_configs: gr.State, state_cur_llm: gr.State):
 
     with gr.Tab("Lessons"):
+        state_word_flags = gr.State(None)
 
-        @gr.render(inputs=[state_lessons, state_cur_lesson, state_llm_configs, state_cur_llm])
-        def render_items(lessons: dict, cur_lesson: str, llm_configs: list[dict], cur_llm: int):   
+        @gr.render(inputs=[state_lessons, state_cur_lesson, state_llm_configs, state_cur_llm, state_word_flags])
+        def render_items(lessons: dict, cur_lesson: str, llm_configs: list[dict], cur_llm: int, word_flags: list[int]):   
 
             if cur_lesson == None:
                 with gr.Row():
@@ -211,9 +233,8 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                 sheet = lessons[cur_lesson]["sheet"]
                 meta = lessons[cur_lesson]["meta"]
                 progress_idx = meta["progress_idx"]
-                
 
-                with gr.Row():
+                with gr.Row(min_height=80):
                     exit_btn = gr.Button("↩", variant="secondary", size="sm", elem_classes=["exit-button"])
                     exit_btn.click(on_exit_lesson, inputs=[state_lessons], outputs=[state_cur_lesson])
 
@@ -229,7 +250,9 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                         gr.Markdown(f"{id}", elem_classes=["phrase"], scale=0, min_width=10)
 
                         words = []
-                        with gr.Row(elem_classes=["lesson-content"]) as row:
+                        all = []
+                        inputs = []
+                        with gr.Row(elem_classes=["phrase-en"]) as row:
                             for i, word in enumerate(en.split(' ')):
                                 word = word.strip()
                                 punctuation = ""
@@ -239,10 +262,25 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                                     word = word[:-1]
 
                                 words.append(word)
-                                gr.Textbox(word, max_lines=1, scale=0, min_width=10, container=False, elem_classes=["word"], interactive=True)
+                                all.append(word)
 
+                                w_class = "w-incorrect"
+                                if word_flags != None:
+                                    if word_flags[i] is PARTIALLY_CORRECT:
+                                        w_class = "w-partial"
+                                    elif word_flags[i] is PARTIALLY_CORRECT_CAP:
+                                        w_class = "w-partial_cap"
+                                    elif word_flags[i] is FULLY_CORRECT:
+                                        w_class = "w-correct"
+
+                                input = gr.Textbox(max_lines=1, scale=0, min_width=10, container=False, elem_classes=["word", w_class, "text-input"], interactive=True, max_length=len(word))
+                                inputs.append(input)
+                                
                                 if punctuation != "":
-                                    words.append(punctuation)
-                                    gr.Textbox(punctuation, max_lines=1, scale=0, min_width=10, container=False, elem_classes=["word", "punctuation"], interactive=False)
+                                    all.append(punctuation)
+                                    gr.Textbox(punctuation, max_lines=1, scale=0, min_width=10, container=False, elem_classes=["word", "w-punct"], interactive=False)
 
-                            gr.HTML(f"", elem_classes=["script"], js_on_load=f'window.resizeWordTextboxes({words})')
+                            gr.HTML(f"", elem_classes=["script"], js_on_load=f'window.resizeWordTextboxes({all})')
+                            
+                            for i, input in enumerate(inputs):
+                                input.change(on_change_word, inputs=[input, gr.State(i), gr.State(words), state_word_flags], outputs=[state_word_flags])
