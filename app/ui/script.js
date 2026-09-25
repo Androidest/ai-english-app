@@ -1,6 +1,6 @@
 console.log("[script.js] loaded");
 
-window.resizeWordTextboxes = function (words) {
+window.updateTextboxes = function (words) {
     const textboxes = document.querySelectorAll(".word");
 
     const canvas = document.createElement("canvas");
@@ -9,9 +9,10 @@ window.resizeWordTextboxes = function (words) {
     for (let i = 0; i < words.length; i++) {
         const container = textboxes[i];
         const input = container.querySelector("input")
-        const word = words[i];
-        const style = getComputedStyle(input);
+        const target_word = words[i];
 
+        // Measure the width of the input box according to the given word
+        const style = getComputedStyle(input);
         ctx.font = [
             style.fontStyle,
             style.fontWeight,
@@ -19,10 +20,36 @@ window.resizeWordTextboxes = function (words) {
             style.fontFamily
         ].join(" ");
 
-        const textWidth = ctx.measureText(word).width;
+        const textWidth = ctx.measureText(target_word).width;
         const width = Math.ceil(textWidth);
-
         container.style.minWidth = `min(calc(${width}px + ${style.paddingLeft} + ${style.paddingRight}), 100%)`;
+        
+        // Update the text color of the input according to the correctness of the input
+        const COLOR_INCORRECT = "#e39696";
+        const COLOR_CORRECT = "#47c7b8";
+        const COLOR_PARTIALLY_CORRECT = "#4783c7";
+        const COLOR_PARTIALLY_CORRECT_CAP = "#e4ba4d";
+        
+        input.oninput = (e)=> {
+            const val = e.target.value;
+            const partial_target = target_word.substring(0, val.length);
+            let color = COLOR_INCORRECT;
+
+            if (val == target_word) {
+                color = COLOR_CORRECT;
+            }
+
+            else if (val.length > 0 && val == partial_target) {
+                color = COLOR_PARTIALLY_CORRECT;
+            }
+            
+            else if (val.length > 0 && partial_target.toLowerCase() == val.toLowerCase()) {
+                color = COLOR_PARTIALLY_CORRECT_CAP;
+            }
+
+            input.style.color = color;
+            input.style.borderColor = color;
+        }
     }
 };
 

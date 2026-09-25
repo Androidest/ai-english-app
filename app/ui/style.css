@@ -163,43 +163,17 @@
     border: 0 !important;
 }
 
-.w-partial input {
-    font-size: 35px !important;
-    color: #4783c7 !important;
-    border: none !important;
-    border-bottom: 2px solid #4783c7 !important;
-    padding: 3px !important;
+.word input {
+    font-size: 35px;
+    border: none;
+    border-bottom: 2px solid;
+    padding: 3px;
 }
 
-.w-partial_cap input {
-    font-size: 35px !important;
-    color: #030303 !important;
-    border: none !important;
-    border-bottom: 2px solid #000000 !important;
-    padding: 3px !important;
-}
-
-.w-correct input {
-    font-size: 35px !important;
-    color: #47c7b8 !important;
-    border: none !important;
-    border-bottom: 2px solid #47c7b8 !important;
-    padding: 3px !important;
-}
-
-.w-incorrect input {
-    font-size: 35px !important;
-    color: #e39696 !important;
-    border: none !important;
-    border-bottom: 2px solid #e39696 !important;
-    padding: 3px !important;
-}
-
-.w-punct input {
-    font-size: 35px !important;
-    color: #4783c7 !important;
-    border: none !important;
-    padding: 0 !important;
+.word-punct input {
+    color: #47c7b8;
+    border: none;
+    padding: 0;
 }
 
 .script {
