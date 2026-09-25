@@ -159,6 +159,53 @@ def on_exit_lesson(lessons: dict):
     save_meta(lessons, cur_lesson)
     return cur_lesson # cur_lesson is None when no lesson is selected, back to the lessons list
 
+def on_click_prev(lessons: dict, cur_lesson: str, progress_idx: int):
+    if progress_idx > 0:
+        progress_idx -= 1
+        update_meta(lessons, cur_lesson, progress_idx)
+        return lessons
+
+def on_click_next(lessons: dict, cur_lesson: str, progress_idx: int):
+    if progress_idx < len(lessons[cur_lesson]["sheet"])-1:
+        progress_idx += 1
+        update_meta(lessons, cur_lesson, progress_idx)
+        return lessons
+
+def on_click_submit(lessons: dict, cur_lesson: str, progress_idx: int, words: list[str], *inputs):
+    message = ""
+    incorrect_count = 0
+    case_incorrect_count = 0
+    ERROR_TEMPLATE = "<span style='color: #e39696; font-size: 18px;'>{msg}</span>"
+    CORRECT_TEMPLATE = "<span style='color: #6ce38a; font-size: 35px;'>{msg}</span>"
+
+    for w, iw in zip(words, inputs):
+        if iw == "":
+            message = ERROR_TEMPLATE.format(msg="Please fill in all the blanks. ")
+        elif iw != w:
+            incorrect_count += 1
+            if iw.lower() == w.lower():
+                case_incorrect_count += 1
+
+    if case_incorrect_count > 0:
+        if case_incorrect_count == 1:
+            message += ERROR_TEMPLATE.format(msg=f"{case_incorrect_count} word has case issue. ")
+        else:
+            message += ERROR_TEMPLATE.format(msg=f"{case_incorrect_count} words have case issue. ")
+
+    incorrect_count = incorrect_count - case_incorrect_count
+    if incorrect_count > 0:
+        if incorrect_count == 1:
+            message += ERROR_TEMPLATE.format(msg=f"{incorrect_count} word is incorrect.")
+        else:
+            message += ERROR_TEMPLATE.format(msg=f"{incorrect_count} words are incorrect.")
+
+    if message == "":
+        message = CORRECT_TEMPLATE.format(msg="🌟Well done!💯✅")
+        # save_lesson_sheet(lessons, cur_lesson)
+        # update_meta(lessons, cur_lesson, progress_idx)
+
+    return lessons, message
+    
 def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state_llm_configs: gr.State, state_cur_llm: gr.State):
 
     with gr.Tab("Lessons"):
@@ -211,6 +258,10 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                 sheet = lessons[cur_lesson]["sheet"]
                 meta = lessons[cur_lesson]["meta"]
                 progress_idx = meta["progress_idx"]
+                if progress_idx < 0:
+                    progress_idx = 0
+                elif progress_idx >= len(sheet):
+                    progress_idx = len(sheet)-1
 
                 with gr.Row(min_height=80):
                     exit_btn = gr.Button("↩", variant="secondary", size="sm", elem_classes=["exit-button"])
@@ -229,6 +280,7 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
 
                         words = []
                         all = []
+                        inputs = []
                         with gr.Row(elem_classes=["phrase-en"]) as row:
                             for i, word in enumerate(en.split(' ')):
                                 word = word.strip()
@@ -241,7 +293,8 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                                 words.append(word)
                                 all.append(word)
 
-                                gr.Textbox(max_lines=1, scale=0, min_width=10, container=False, elem_classes=["word", "text-input"], interactive=True, max_length=len(word))
+                                input = gr.Textbox("", max_lines=1, scale=0, min_width=10, container=False, elem_classes=["word", "text-input"], interactive=True, max_length=len(word))
+                                inputs.append(input)
                                 
                                 if punctuation != "":
                                     all.append(punctuation)
@@ -258,3 +311,15 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                         gr.HTML(f"<div class='tip-bubble tip-partially'>partially</div>")
                     with gr.Column(scale=0, min_width=100):
                         gr.HTML(f"<div class='tip-bubble tip-correct'>correct</div>")
+
+                msg = gr.Markdown("", scale=0, elem_classes=["tip-msg"])
+                with gr.Row(min_height=10, elem_classes=["button-bar"]):
+                    with gr.Column(scale=0, min_width=100):
+                        btn = gr.Button("◀", interactive=progress_idx > 0)
+                        btn.click(on_click_prev, inputs=[state_lessons, state_cur_lesson, gr.State(progress_idx)], outputs=[state_lessons])
+                    with gr.Column(scale=0, min_width=120):
+                        submit_btn = gr.Button("⏏ submit", elem_classes=["submit-button"])
+                        submit_btn.click(on_click_submit, inputs=[state_lessons, state_cur_lesson, gr.State(progress_idx), gr.State(words)] + inputs, outputs=[state_lessons, msg])
+                    with gr.Column(scale=0, min_width=100):
+                        btn = gr.Button("▶", interactive=progress_idx < len(sheet)-1)
+                        btn.click(on_click_next, inputs=[state_lessons, state_cur_lesson, gr.State(progress_idx)], outputs=[state_lessons])

@@ -164,6 +164,7 @@
 }
 
 .word input {
+    border-color: #000000;
     font-size: 35px;
     border: none;
     border-bottom: 2px solid;
@@ -220,4 +221,32 @@
 .tip-correct {
     background: #47c7b8;
     color: #fff;
+}
+
+.button-bar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.button-bar button {
+    font-size: 18px;
+    font-weight: normal;
+    border: 0px;
+    height: 35px;
+}
+
+.submit-button {
+    background-color: #c8ebe7;
+}
+
+.submit-button:hover {
+    background-color: #95e9df;
+}
+
+.tip-msg {
+    font-size: 18px;
+    font-weight: normal;
+    text-align: center;
 }
