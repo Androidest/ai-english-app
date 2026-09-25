@@ -2,7 +2,6 @@ console.log("[script.js] loaded");
 
 window.updateTextboxes = function (words) {
     const textboxes = document.querySelectorAll(".word");
-
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
@@ -22,13 +21,13 @@ window.updateTextboxes = function (words) {
 
         const textWidth = ctx.measureText(target_word).width;
         const width = Math.ceil(textWidth);
-        container.style.minWidth = `min(calc(${width}px + ${style.paddingLeft} + ${style.paddingRight}), 100%)`;
+        container.style.minWidth = `calc(${width}px + ${style.paddingLeft} + ${style.paddingRight})`;
         
         // Update the text color of the input according to the correctness of the input
         const COLOR_INCORRECT = "#e39696";
         const COLOR_CORRECT = "#47c7b8";
         const COLOR_PARTIALLY_CORRECT = "#4783c7";
-        const COLOR_PARTIALLY_CORRECT_CAP = "#e4ba4d";
+        const COLOR_PARTIALLY_CORRECT_CASE = "#e4ba4d";
         
         input.oninput = (e)=> {
             const val = e.target.value;
@@ -44,11 +43,32 @@ window.updateTextboxes = function (words) {
             }
             
             else if (val.length > 0 && partial_target.toLowerCase() == val.toLowerCase()) {
-                color = COLOR_PARTIALLY_CORRECT_CAP;
+                color = COLOR_PARTIALLY_CORRECT_CASE;
             }
 
             input.style.color = color;
             input.style.borderColor = color;
+
+            // Update the tip bubbles
+            const tip_bubbles = document.querySelectorAll(".tip-bubble");
+            const tip_dict = {
+                [COLOR_INCORRECT]: tip_bubbles[0],
+                [COLOR_PARTIALLY_CORRECT_CASE]: tip_bubbles[1],
+                [COLOR_PARTIALLY_CORRECT]: tip_bubbles[2],
+                [COLOR_CORRECT]: tip_bubbles[3],
+            }
+            for (let t of tip_bubbles) {
+                t.style.borderWidth = "0px";
+            }
+            tip_dict[color].style.borderWidth = "4px";
+            tip_dict[color].style.transform = "translateY(-12px)";
+            
+            if (tip_dict[color].timeout) {
+                clearTimeout(tip_dict[color].timeout);
+            }
+            tip_dict[color].timeout = setTimeout(() => {
+                tip_dict[color].style.transform = "translateY(0px)";
+            }, 100);
         }
     }
 };

@@ -179,3 +179,45 @@
 .script {
     display: none;
 }
+
+.tip-bar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0px ;
+}
+
+.tip-bubble {
+    font-size:12px;
+    border-radius: 20px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 25px;
+    border-color: #452e6b;
+    border-width: 0px; /* for later use */
+    border-style: solid;
+    transition: transform 0.2s ease-out;
+}
+
+.tip-incorrect {
+    background: #e39696;
+    color: #fff;
+}
+
+.tip-partially {
+    background: #4783c7;
+    color: #fff;
+}
+
+.tip-case-issue {
+    background: #e4ba4d;
+    color: #fff;
+}
+
+.tip-correct {
+    background: #47c7b8;
+    color: #fff;
+}

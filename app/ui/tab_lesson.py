@@ -229,7 +229,6 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
 
                         words = []
                         all = []
-                        inputs = []
                         with gr.Row(elem_classes=["phrase-en"]) as row:
                             for i, word in enumerate(en.split(' ')):
                                 word = word.strip()
@@ -242,11 +241,20 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                                 words.append(word)
                                 all.append(word)
 
-                                input = gr.Textbox(max_lines=1, scale=0, min_width=10, container=False, elem_classes=["word", "text-input"], interactive=True, max_length=len(word))
-                                inputs.append(input)
+                                gr.Textbox(max_lines=1, scale=0, min_width=10, container=False, elem_classes=["word", "text-input"], interactive=True, max_length=len(word))
                                 
                                 if punctuation != "":
                                     all.append(punctuation)
                                     gr.Textbox(punctuation, max_lines=1, scale=0, min_width=10, container=False, elem_classes=["word", "word-punct"], interactive=False)
 
                             gr.HTML(f"", elem_classes=["script"], js_on_load=f'window.updateTextboxes({all})')
+
+                with gr.Row(min_height=10, elem_classes=["tip-bar"]):
+                    with gr.Column(scale=0, min_width=100):
+                        gr.HTML(f"<div class='tip-bubble tip-incorrect'>incorrect</div>")
+                    with gr.Column(scale=0, min_width=100):
+                        gr.HTML(f"<div class='tip-bubble tip-case-issue'>case issue</div>")
+                    with gr.Column(scale=0, min_width=100):
+                        gr.HTML(f"<div class='tip-bubble tip-partially'>partially</div>")
+                    with gr.Column(scale=0, min_width=100):
+                        gr.HTML(f"<div class='tip-bubble tip-correct'>correct</div>")
