@@ -250,3 +250,11 @@
     font-weight: normal;
     text-align: center;
 }
+
+.favourite-on {
+    color: #f37921;
+}
+
+.favourite-off {
+    color: #000000;
+}

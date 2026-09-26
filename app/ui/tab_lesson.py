@@ -3,17 +3,39 @@ from app.utils.paths import PATH_LESSONS
 from app.utils.sheet import Sheet
 import json
 
-def get_lesson_meta(sheet: Sheet, progress_idx: int = 0) -> dict:
-    # TODO
-    return {
-        "progress_idx": progress_idx, 
-    }
+# region Lesson Management Functions
+IS_FAVORITE = 0b01
+IS_PASSED = 0b10
 
-def generate_lesson(sheet: Sheet):
-    # TODO
+ERROR_TEMPLATE = "<span style='color: #e39696; font-size: 18px;'>{msg}</span>"
+CORRECT_TEMPLATE = "<span style='color: #6ce38a; font-size: 35px;'>{msg}</span>"
+PASSED_MSG = CORRECT_TEMPLATE.format(msg="🌟Well done!💯✅")
+
+def generate_lesson(sheet_path: str):
+    sheet = Sheet(sheet_path, default_data={'EN':[], 'CN':[], 'ID':[]}, dtype=str)
     sheet[0, "EN"] = "hello"
     sheet[0, "CN"] = "你好"
     sheet[0, "ID"] = "halo"
+    return sheet
+
+def save_lesson_sheet(lessons: dict, lesson_name: str):
+    if not PATH_LESSONS.exists():
+        PATH_LESSONS.mkdir(parents=True, exist_ok=True)
+
+    # save lesson sheet
+    sheet : Sheet = lessons[lesson_name]["sheet"]
+    if sheet is None:
+        raise ValueError("Sheet sheet is None")
+    
+    sheet.save()
+
+def load_sheet(lesson_name: str) -> Sheet:
+    path = PATH_LESSONS / f"{lesson_name}.xlsx"
+    if not path.exists():
+        raise ValueError(f"Lesson {lesson_name} does not exist")
+
+    sheet = Sheet(path)
+    return sheet
 
 def load_lessons() -> tuple:
     lessons_meta: dict = {} # meta is for fast access to some breif info of each lesson without loading all the sheets
@@ -36,48 +58,33 @@ def load_lessons() -> tuple:
 
             # Load the lesson meta and sheet only when the meta is missing.
             if lessons[lesson_name]["meta"] is None:
-                sheet = Sheet(file_path)
-                lessons[lesson_name]["sheet"] = sheet
-                lessons[lesson_name]["meta"] = get_lesson_meta(sheet)
+                lessons[lesson_name]["meta"] = generate_lesson_meta(load_sheet(lesson_name))
                 has_missing_meta = True
 
-            elif cur_lesson is not None and cur_lesson == lesson_name and lessons[lesson_name]["sheet"] is None:
+            elif cur_lesson == lesson_name:
                 # if current lesson is the same as the lesson name, load the sheet before entering the lesson
-                lessons[lesson_name]["sheet"] = Sheet(file_path) # same in on_choose_lesson
+                lessons[lesson_name]["sheet"] = load_sheet(lesson_name)
 
         if has_missing_meta:
             save_meta(lessons, cur_lesson)
 
     return lessons, cur_lesson
 
-def save_lesson_sheet(lessons: dict, lesson_name: str):
-    if not PATH_LESSONS.exists():
-        PATH_LESSONS.mkdir(parents=True, exist_ok=True)
-
-    # save lesson sheet
-    sheet : Sheet = lessons[lesson_name]["sheet"]
-    if sheet is None:
-        raise ValueError("Sheet sheet is None")
-    
-    sheet.save()
-
 def delete_lesson_sheet(lesson_name: str):
     path = PATH_LESSONS / f"{lesson_name}.xlsx"
     if path.exists():
         path.unlink()
 
-def load_meta() -> tuple:
-    cur_lesson = None
-    lessons_meta = {}
+# endregion Lesson Management Functions
 
-    meta_path = PATH_LESSONS/"meta.json"
-    if meta_path.exists():
-        with open(meta_path, "r", encoding="utf-8") as f:
-            meta = json.load(f)
-            cur_lesson = meta["cur_lesson"]
-            lessons_meta = meta["lessons_meta"]
+# region Meta Management Functions
 
-    return lessons_meta, cur_lesson
+def generate_lesson_meta(sheet: Sheet, progress_idx: int = 0) -> dict:
+    # TODO
+    return {
+        "progress_idx": progress_idx, 
+        "phrases_flag": {},
+    }
 
 def save_meta(lessons: dict, cur_lesson: str):
     if not PATH_LESSONS.exists():
@@ -92,34 +99,46 @@ def save_meta(lessons: dict, cur_lesson: str):
     with open(PATH_LESSONS/"meta.json", "w", encoding="utf-8") as f:
         json.dump(new_meta, f, ensure_ascii=False, indent=4)
 
-def update_meta(lessons: dict, cur_lesson: str, progress_idx: int):
-    new_lessons = lessons.copy()
-    new_lessons[cur_lesson]["meta"] = get_lesson_meta(new_lessons[cur_lesson]["sheet"], progress_idx)
-    save_meta(new_lessons, cur_lesson)
+def load_meta() -> tuple:
+    cur_lesson = None
+    lessons_meta = {}
 
-    return new_lessons, cur_lesson
+    meta_path = PATH_LESSONS/"meta.json"
+    if meta_path.exists():
+        with open(meta_path, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+            cur_lesson = meta["cur_lesson"]
+            lessons_meta = meta["lessons_meta"]
+
+    return lessons_meta, cur_lesson
+
+def delete_lesson_meta(lessons: dict, lesson_name: str, new_cur_lesson: str = None):
+    del lessons[lesson_name]
+    save_meta(lessons, new_cur_lesson)
+
+def update_progress(lessons: dict, cur_lesson: str, progress_idx: int):
+    lessons[cur_lesson]["meta"]["progress_idx"] = progress_idx
+    save_meta(lessons, cur_lesson)
+
+# endregion Meta Management Functions
+
+# region UI events
 
 def on_delete_lesson(old_lessons: dict, cur_lesson: str):
-    new_lessons = old_lessons.copy()
-    del new_lessons[cur_lesson]
-
-    # update lesson files
+    new_lessons = { **old_lessons } # shallow copy
     delete_lesson_sheet(cur_lesson)
-    save_meta(new_lessons, cur_lesson)
-
+    delete_lesson_meta(new_lessons, cur_lesson, new_cur_lesson=None)
     return new_lessons
 
 def on_confirm_add_lesson(old_lessons: dict, lesson_name: str):
     # generate lesson data
-    sheet = Sheet(PATH_LESSONS / f"{lesson_name}.xlsx", default_data={'EN':[], 'CN':[], 'ID':[]}, dtype=str)
+    sheet = generate_lesson(PATH_LESSONS / f"{lesson_name}.xlsx")
 
-    generate_lesson(sheet)
-
-    new_lessons = old_lessons.copy()
+    new_lessons = { **old_lessons } # shallow copy
     new_lessons[lesson_name] = { 
         "name": lesson_name,
         "sheet": sheet,
-        "meta": get_lesson_meta(sheet),
+        "meta": generate_lesson_meta(sheet, 0),
     }
 
     # update lesson files
@@ -144,12 +163,8 @@ def on_choose_lesson(lesson_name: str, old_lessons: dict):
     new_lessons = old_lessons
     # update lesson sheet
     if old_lessons[lesson_name].get("sheet", None) is None:
-        path = PATH_LESSONS / f"{lesson_name}.xlsx"
-        if not path.exists():
-            raise ValueError(f"Lesson {lesson_name} does not exist")
-
-        new_lessons = old_lessons.copy()
-        new_lessons[lesson_name]["sheet"] = Sheet(path)
+        new_lessons = { **old_lessons } # shallow copy
+        new_lessons[lesson_name]["sheet"] = load_sheet(lesson_name)
 
     save_meta(new_lessons, new_cur_lesson)
     return new_lessons, new_cur_lesson
@@ -161,22 +176,20 @@ def on_exit_lesson(lessons: dict):
 
 def on_click_prev(lessons: dict, cur_lesson: str, progress_idx: int):
     if progress_idx > 0:
-        progress_idx -= 1
-        update_meta(lessons, cur_lesson, progress_idx)
-        return lessons
+        new_lessons = { **lessons } # shallow copy
+        update_progress(lessons, cur_lesson, progress_idx - 1)
+        return new_lessons
 
 def on_click_next(lessons: dict, cur_lesson: str, progress_idx: int):
     if progress_idx < len(lessons[cur_lesson]["sheet"])-1:
-        progress_idx += 1
-        update_meta(lessons, cur_lesson, progress_idx)
-        return lessons
+        new_lessons = { **lessons } # shallow copy
+        update_progress(new_lessons, cur_lesson, progress_idx + 1)
+        return new_lessons
 
 def on_click_submit(lessons: dict, cur_lesson: str, progress_idx: int, words: list[str], *inputs):
     message = ""
     incorrect_count = 0
     case_incorrect_count = 0
-    ERROR_TEMPLATE = "<span style='color: #e39696; font-size: 18px;'>{msg}</span>"
-    CORRECT_TEMPLATE = "<span style='color: #6ce38a; font-size: 35px;'>{msg}</span>"
 
     for w, iw in zip(words, inputs):
         if iw == "":
@@ -200,12 +213,39 @@ def on_click_submit(lessons: dict, cur_lesson: str, progress_idx: int, words: li
             message += ERROR_TEMPLATE.format(msg=f"{incorrect_count} words are incorrect.")
 
     if message == "":
-        message = CORRECT_TEMPLATE.format(msg="🌟Well done!💯✅")
-        # save_lesson_sheet(lessons, cur_lesson)
-        # update_meta(lessons, cur_lesson, progress_idx)
+        message = PASSED_MSG
+        new_lessons = lessons.copy() # shallow copy
+        meta = new_lessons[cur_lesson]["meta"]
+        meta["phrases_flag"][str(progress_idx)] = meta["phrases_flag"].get(str(progress_idx), 0) | IS_PASSED
+        save_meta(new_lessons, cur_lesson)
+        return new_lessons, message
 
     return lessons, message
+
+def on_click_favourite(lessons: dict, cur_lesson: str, progress_idx: int):
+    new_lessons = lessons.copy() # shallow copy
+    meta = new_lessons[cur_lesson]["meta"]
+    meta["phrases_flag"][str(progress_idx)] = meta["phrases_flag"].get(str(progress_idx), 0) ^ IS_FAVORITE
+    save_meta(lessons, cur_lesson)
+    return new_lessons
+
+def on_click_restart(lessons: dict, cur_lesson: str):
+    new_lessons = { **lessons } # shallow copy
+    meta = new_lessons[cur_lesson]["meta"]
     
+    meta["phrases_flag"] = {
+        idx: flag & ~IS_PASSED
+        for idx, flag in meta["phrases_flag"].items() if flag != IS_PASSED
+    }
+
+    meta["progress_idx"] = 0
+    save_meta(new_lessons, cur_lesson)
+    return new_lessons
+
+# endregion UI events
+
+# region UI Components
+
 def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state_llm_configs: gr.State, state_cur_llm: gr.State):
 
     with gr.Tab("Lessons"):
@@ -258,6 +298,10 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                 sheet = lessons[cur_lesson]["sheet"]
                 meta = lessons[cur_lesson]["meta"]
                 progress_idx = meta["progress_idx"]
+                is_favourite = meta["phrases_flag"].get(str(progress_idx), 0) & IS_FAVORITE
+                is_passed = meta["phrases_flag"].get(str(progress_idx), 0) & IS_PASSED
+                print(meta)
+
                 if progress_idx < 0:
                     progress_idx = 0
                 elif progress_idx >= len(sheet):
@@ -293,7 +337,7 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                                 words.append(word)
                                 all.append(word)
 
-                                input = gr.Textbox("", max_lines=1, scale=0, min_width=10, container=False, elem_classes=["word", "text-input"], interactive=True, max_length=len(word))
+                                input = gr.Textbox(word if is_passed else "", max_lines=1, scale=0, min_width=10, container=False, elem_classes=["word", "text-input"], interactive=True, max_length=len(word))
                                 inputs.append(input)
                                 
                                 if punctuation != "":
@@ -312,8 +356,11 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                     with gr.Column(scale=0, min_width=100):
                         gr.HTML(f"<div class='tip-bubble tip-correct'>correct</div>")
 
-                msg = gr.Markdown("", scale=0, elem_classes=["tip-msg"])
+                msg = gr.Markdown(PASSED_MSG if is_passed else "", scale=0, elem_classes=["tip-msg"])
                 with gr.Row(min_height=10, elem_classes=["button-bar"]):
+                    with gr.Column(scale=0, min_width=50):
+                        btn = gr.Button("↺")
+                        btn.click(on_click_restart, inputs=[state_lessons, state_cur_lesson], outputs=[state_lessons])
                     with gr.Column(scale=0, min_width=100):
                         btn = gr.Button("◀", interactive=progress_idx > 0)
                         btn.click(on_click_prev, inputs=[state_lessons, state_cur_lesson, gr.State(progress_idx)], outputs=[state_lessons])
@@ -323,3 +370,8 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                     with gr.Column(scale=0, min_width=100):
                         btn = gr.Button("▶", interactive=progress_idx < len(sheet)-1)
                         btn.click(on_click_next, inputs=[state_lessons, state_cur_lesson, gr.State(progress_idx)], outputs=[state_lessons])
+                    with gr.Column(scale=0, min_width=50):
+                        btn = gr.Button("★", elem_classes="favourite-on" if is_favourite else "favourite-off")
+                        btn.click(on_click_favourite, inputs=[state_lessons, state_cur_lesson, gr.State(progress_idx)], outputs=[state_lessons])
+
+# endregion UI Components
