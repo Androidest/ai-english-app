@@ -6,6 +6,7 @@ class BaseConfig(BaseSettings):
     ENVIRONMENT: str
     HOST: str
     PORT: int
+    SHARE: bool = Field(default=False, env="SHARE")
     CORS_ORIGINS: Union[List[str], str] = Field(default=["*"], env="CORS_ORIGINS")
     
     @field_validator("CORS_ORIGINS", mode="before")

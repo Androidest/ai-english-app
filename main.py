@@ -29,4 +29,5 @@ if __name__ == "__main__":
         inbrowser=True,
         css=external_css,
         js=external_js,
+        share=config.SHARE,
     )
