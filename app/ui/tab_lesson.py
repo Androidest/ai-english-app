@@ -10,9 +10,30 @@ ERROR_TEMPLATE = "<span style='color: #e39696; font-size: 18px;'>{msg}</span>"
 CORRECT_TEMPLATE = "<span style='color: #6ce38a; font-size: 35px;'>{msg}</span>"
 PASSED_MSG = CORRECT_TEMPLATE.format(msg="🌟Well done!💯✅")
 
-# region Lesson Management Functions
+# region Init
 
-def generate_lesson(sheet_path: str):
+def load_lessons() -> tuple:
+    lessons: dict = {} # lessons meta
+    if PATH_LESSONS.exists():
+        for file_path in PATH_LESSONS.rglob(f"*.xlsx"):
+            lesson_name = file_path.stem
+            lessons[lesson_name] = load_meta(lesson_name)
+
+    cur_lesson: str = ""
+    cur_lesson_path = PATH_LESSONS / "cur_lesson.txt"
+    if not cur_lesson_path.exists():
+        cur_lesson_path.write_text("")
+        cur_lesson = ""
+    else:
+        cur_lesson = cur_lesson_path.read_text().strip()
+
+    return lessons, cur_lesson
+
+# endregion Init
+
+# region sheet Management Functions
+
+def generate_sheet(sheet_path: str):
     # TODO
     sheet = Sheet(sheet_path, default_data={'EN':[], 'CN':[], 'ID':[]}, dtype=str)
     sheet[0, "EN"] = "hello"
@@ -38,23 +59,6 @@ def delete_sheet(lesson_name: str):
     path = PATH_LESSONS / f"{lesson_name}.xlsx"
     if path.exists():
         path.unlink()
-
-def load_lessons() -> tuple:
-    lessons: dict = {} # lessons meta
-    if PATH_LESSONS.exists():
-        for file_path in PATH_LESSONS.rglob(f"*.xlsx"):
-            lesson_name = file_path.stem
-            lessons[lesson_name] = load_meta(lesson_name)
-
-    cur_lesson: str = ""
-    cur_lesson_path = PATH_LESSONS / "cur_lesson.txt"
-    if not cur_lesson_path.exists():
-        cur_lesson_path.write_text("")
-        cur_lesson = ""
-    else:
-        cur_lesson = cur_lesson_path.read_text().strip()
-
-    return lessons, cur_lesson
 
 # endregion Lesson Management Functions
 
@@ -154,7 +158,7 @@ def on_delete_lesson(cur_lesson: str):
 
 def on_confirm_add_lesson(old_lessons: dict, lesson_name: str):
     # generate lesson data
-    sheet = generate_lesson(PATH_LESSONS / f"{lesson_name}.xlsx")
+    sheet = generate_sheet(PATH_LESSONS / f"{lesson_name}.xlsx")
 
     new_lessons = old_lessons.copy()
     new_lessons[lesson_name] = create_default_meta(lesson_name, sheet)
