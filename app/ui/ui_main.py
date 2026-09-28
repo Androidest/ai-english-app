@@ -6,6 +6,7 @@ with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for
     # region UI Components
     state_lessons = gr.State(value={})
     state_cur_lesson = gr.State(value="")
+    state_cur_sort_by = gr.State(value="")
     state_llm_configs = gr.State(value=[])
     state_cur_llm = gr.State(value=-1)
 
@@ -21,18 +22,19 @@ with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for
                 gr.Textbox(cur_llm_name, label="Current AI", scale=0)
     
     with gr.Row():
-        render_tab_lesson(state_lessons, state_cur_lesson, state_llm_configs, state_cur_llm)
+        render_tab_lesson(state_lessons, state_cur_lesson, state_cur_sort_by, state_llm_configs, state_cur_llm)
         render_tab_ai(state_llm_configs, state_cur_llm)
         
 
     def on_load():
-        lessons, cur_lesson = load_lessons()
+        lessons, cur_lesson, cur_sort_by = load_lessons()
         llm_configs, cur_llm = load_llm_configs()
         print("Loading Finished")
 
         return (
             lessons,
             cur_lesson,
+            cur_sort_by,
             llm_configs, 
             cur_llm,
         )
@@ -40,6 +42,7 @@ with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for
     demo.load(on_load, outputs=[
         state_lessons,
         state_cur_lesson,
+        state_cur_sort_by,
         state_llm_configs,
         state_cur_llm,
     ])

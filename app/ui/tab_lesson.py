@@ -10,6 +10,11 @@ ERROR_TEMPLATE = "<span style='color: #e39696; font-size: 18px;'>{msg}</span>"
 CORRECT_TEMPLATE = "<span style='color: #6ce38a; font-size: 35px;'>{msg}</span>"
 PASSED_MSG = CORRECT_TEMPLATE.format(msg="🌟Well done!💯✅")
 
+SORT_LATEST = "latest"
+SORT_OLDEST = "oldest"
+SORT_ALPHA_A_Z = "A → Z"
+SORT_ALPHA_Z_A = "Z → A"
+
 # region Init
 
 def load_lessons() -> tuple:
@@ -19,17 +24,51 @@ def load_lessons() -> tuple:
             lesson_name = file_path.stem
             lessons[lesson_name] = load_meta(lesson_name)
 
-    cur_lesson: str = ""
-    cur_lesson_path = PATH_LESSONS / "cur_lesson.txt"
-    if not cur_lesson_path.exists():
-        cur_lesson_path.write_text("")
-        cur_lesson = ""
-    else:
-        cur_lesson = cur_lesson_path.read_text().strip()
+    cache = load_cache()
+    cur_lesson = cache["cur_lesson"]
+    cur_sort_by = cache["cur_sort_by"]
 
-    return lessons, cur_lesson
+    return lessons, cur_lesson, cur_sort_by
 
 # endregion Init
+
+# region Cache Management
+
+def create_default_cache() -> dict:
+    return {
+        "cur_lesson": "",
+        "cur_sort_by": SORT_LATEST,
+    }
+
+def load_cache() -> dict:
+    cache_path = PATH_LESSONS / "cache.json"
+    if cache_path.exists():
+        with open(cache_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    else:
+        cache = create_default_cache()
+        save_cache(cache, override_all=True)
+        return cache
+    
+def save_cache(cache: dict, override_all: bool = False):
+    if not PATH_LESSONS.exists():
+        PATH_LESSONS.mkdir(parents=True, exist_ok=True)
+    
+    cache_path = PATH_LESSONS / "cache.json"
+
+    # Update existing cache
+    if cache_path.exists() and not override_all:
+        with open(cache_path, "r", encoding="utf-8") as f:
+            old_cache = json.load(f)
+            cache = { **old_cache, **cache }
+
+    # Save cache to file
+    with open(cache_path, "w", encoding="utf-8") as f:
+        json.dump(cache, f, ensure_ascii=False, indent=4)
+
+    return cache
+
+# endregion Cache Management
 
 # region sheet Management Functions
 
@@ -67,29 +106,28 @@ def delete_sheet(lesson_name: str):
 def create_default_meta(lesson_name: str, sheet: Sheet) -> dict:
     meta = {
         "name": lesson_name,
+        "time_created": sheet.time_created,
         "progress_idx": 0, 
         "phrases_flag": {},
     }
     meta = make_brief_meta(meta, sheet)
     return meta
 
-def save_chosen_lesson(lesson_name: str):
-    cur_lesson_path = PATH_LESSONS / "cur_lesson.txt"
-    cur_lesson_path.write_text(lesson_name)
-
-def save_meta(meta: dict, update: bool = True):
+def save_meta(meta: dict, override_all: bool = False):
     if not PATH_LESSONS.exists():
         PATH_LESSONS.mkdir(parents=True, exist_ok=True)
 
     if not (PATH_LESSONS / f"{meta['name']}.xlsx").exists():
         raise ValueError(f"Lesson {meta['name']} excel file does not exist")
 
+    # Update existing meta
     meta_path = PATH_LESSONS / f"{meta['name']}.json"
-    if meta_path.exists() and update:
+    if meta_path.exists() and not override_all:
         with open(meta_path, "r", encoding="utf-8") as f:
             old_meta = json.load(f)
             meta = { **old_meta, **meta }
 
+    # Save meta to file
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=4)
 
@@ -103,7 +141,7 @@ def load_meta(lesson_name) -> dict:
     else:
         sheet = load_sheet(lesson_name)
         meta = create_default_meta(lesson_name, sheet)
-        save_meta(meta)
+        save_meta(meta, override_all=True)
         return meta
 
 def delete_meta(lesson_name: str):
@@ -147,9 +185,24 @@ def set_pass_phrase(meta: dict, idx: int, is_correct: bool):
         meta["phrases_flag"][str(idx)] = meta["phrases_flag"].get(str(idx), 0) & ~IS_PASSED
     return meta
 
+def sort_lessons(lessons: dict, sort_by: str) -> list[(str, dict)]:
+    if sort_by == SORT_LATEST:
+        return sorted(lessons.items(), key=lambda item: item[1]["time_created"], reverse=True)
+    elif sort_by == SORT_OLDEST:
+        return sorted(lessons.items(), key=lambda item: item[1]["time_created"])
+    elif sort_by == SORT_ALPHA_A_Z:
+        return sorted(lessons.items(), key=lambda item: item[0])
+    elif sort_by == SORT_ALPHA_Z_A:
+        return sorted(lessons.items(), key=lambda item: item[0], reverse=True)
+    return []
+
 # endregion Meta Management Functions
 
 # region UI events
+
+def on_click_sort_by(cur_sort_by: str):
+    save_cache({ "cur_sort_by": cur_sort_by })
+    return cur_sort_by
 
 def on_delete_lesson(cur_lesson: str):
     delete_sheet(cur_lesson)
@@ -164,7 +217,7 @@ def on_confirm_add_lesson(old_lessons: dict, lesson_name: str):
     new_lessons[lesson_name] = create_default_meta(lesson_name, sheet)
 
     save_sheet(sheet)
-    save_meta(new_lessons[lesson_name], False)
+    save_meta(new_lessons[lesson_name], override_all=True)
 
     return new_lessons, lesson_name
 
@@ -172,16 +225,20 @@ def on_click_add_lesson():
     # TODO
     return
 
-def on_choose_lesson(meta: dict) -> str:
-    print(f"Choose lesson: {meta['name']}")
-    save_chosen_lesson(meta["name"])
-    return meta["name"]
+def on_choose_lesson(meta: dict) -> tuple:
+    lesson_name = meta["name"]
+    print(f"Choose lesson: {lesson_name}")
+    save_cache({ "cur_lesson": lesson_name })
+    return lesson_name
 
-def on_exit_lesson(lessons: dict) -> tuple:
+def on_exit_lesson(lessons: dict, meta: dict) -> tuple:
+    # refresh lessons list with the updated meta
+    new_lessons = lessons.copy() 
+    new_lessons[meta["name"]] = meta
+    # reset current lesson to empty, back to the lessons list
     new_cur_lesson = ""
-    new_lessons = lessons.copy() # refresh lessons list
-
-    save_chosen_lesson(new_cur_lesson)
+    save_cache({ "cur_lesson": new_cur_lesson })
+    
     return new_cur_lesson, new_lessons # cur_meta is empty when no lesson is selected, back to the lessons list
 
 def on_click_prev(meta: dict, progress_idx: int):
@@ -251,53 +308,74 @@ def on_click_restart(meta: dict):
 
 # region UI Components
 
-def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state_llm_configs: gr.State, state_cur_llm: gr.State):
+def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state_cur_sort_by: gr.State, state_llm_configs: gr.State, state_cur_llm: gr.State):
 
     with gr.Tab("Lessons"):
 
         @gr.render(inputs=[state_lessons, state_cur_lesson])
         def render_tab(lessons: dict, cur_lesson: str):   
+            
+            print(f"cur_lesson: {cur_lesson}")
 
             if cur_lesson == "":
-                with gr.Row():
-                    # list of lessons
-                    # TODO different sorting options
-                    sorted_lessons = sorted(lessons.items(), key=lambda item: item[0])
+                # sorting bar
+                @gr.render(inputs=[state_cur_sort_by])
+                def render_tab(sort_by: str): 
+                    with gr.Row(scale=0, elem_classes=["sort-buttons-bar"]):
+                        
+                        types = [SORT_LATEST, SORT_OLDEST, SORT_ALPHA_A_Z, SORT_ALPHA_Z_A]
 
-                    for lesson_name, meta in sorted_lessons:
-                        s_meta = gr.State(meta)
+                        for i, v in enumerate(types):
+                            style_active = "sort-btn-active" if v == sort_by else "sort-btn-inactive"
+                            style_pos = 'sort-btn-mid'
+                            if i == 0:
+                                style_pos = 'sort-btn-left'
+                            elif i == len(types) - 1:
+                                style_pos = 'sort-btn-right'
+                        
+                            b = gr.Button(v, scale=0, elem_classes=["sort-btn", style_active, style_pos], min_width=80) 
+                            b.click(on_click_sort_by, inputs=[gr.State(v)], outputs=[state_cur_sort_by])
 
-                        with gr.Column(variant="panel", elem_classes=["clickable-item", "lesson-item", "lesson-item-bg"], scale=0):
-                            # invisible button to trigger click event for the entire item card
-                            with gr.Row(scale=0, elem_classes=["lesson-name-wrapper"]):
-                                gr.Markdown(f"### {lesson_name}", elem_classes=["lesson-name"], scale=0, line_breaks=True)
-                                item_btn1 = gr.Button("", elem_classes=["lesson-click-button"])
-                                item_btn1.click(
+                # list of lessons
+                @gr.render(inputs=[state_lessons, state_cur_sort_by])
+                def render_tab(lessons: dict, sort_by: str):
+                    with gr.Row():
+                        sorted_lessons = sort_lessons(lessons, sort_by)
+
+                        for lesson_name, meta in sorted_lessons:
+                            s_meta = gr.State(meta)
+
+                            with gr.Column(variant="panel", elem_classes=["clickable-item", "lesson-item", "lesson-item-bg"], scale=0):
+                                # invisible button to trigger click event for the entire item card
+                                with gr.Row(scale=0, elem_classes=["lesson-name-wrapper"]):
+                                    gr.Markdown(f"### {lesson_name}", elem_classes=["lesson-name"], scale=0, line_breaks=True)
+                                    item_btn1 = gr.Button("", elem_classes=["lesson-click-button"])
+                                    item_btn1.click(
+                                        on_choose_lesson,
+                                        inputs=[s_meta],
+                                        outputs=[state_cur_lesson],
+                                    )
+
+                                # TODO: render meta
+                                gr.Markdown(f"{meta['progress_idx']}", elem_classes=["lesson-meta"], scale=0, line_breaks=True)
+
+                                item_btn = gr.Button("", elem_classes=["lesson-click-button"])
+                                item_btn.click(
                                     on_choose_lesson,
                                     inputs=[s_meta],
                                     outputs=[state_cur_lesson],
                                 )
-
-                            # TODO: render meta
-                            gr.Markdown(f"{meta['progress_idx']}", elem_classes=["lesson-meta"], scale=0, line_breaks=True)
-
-                            item_btn = gr.Button("", elem_classes=["lesson-click-button"])
-                            item_btn.click(
-                                on_choose_lesson,
-                                inputs=[s_meta],
-                                outputs=[state_cur_lesson],
-                            )
-                            
-                    with gr.Column(variant="panel", elem_classes=["lesson-item"], scale=0):
-                        # the last item is the add button
-                        add_btn = gr.Button("➕", variant="secondary", elem_classes=["lesson-item"]) 
-                        add_btn.click(on_click_add_lesson, outputs=[])
+                                
+                        with gr.Column(variant="panel", elem_classes=["lesson-item"], scale=0):
+                            # the last item is the add button
+                            add_btn = gr.Button("➕", variant="secondary", elem_classes=["lesson-item"]) 
+                            add_btn.click(on_click_add_lesson, outputs=[])
 
             else:
-                state_cur_meta = gr.State(lessons[cur_lesson])
-                state_cur_sheet = gr.State(load_sheet(cur_lesson))
-
-                @gr.render(inputs=[state_cur_meta, state_cur_sheet])
+                s_cur_meta = gr.State(value=lessons[cur_lesson])
+                s_cur_sheet = gr.State(value=load_sheet(cur_lesson))
+                
+                @gr.render(inputs=[s_cur_meta, s_cur_sheet])
                 def render_lesson_content(meta: dict, sheet: gr.DataFrame):
                     progress_idx = meta["progress_idx"]
                     is_passed = is_phrase_passed(meta, progress_idx)
@@ -310,7 +388,7 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
 
                     with gr.Row(min_height=80):
                         exit_btn = gr.Button("↩", variant="secondary", size="sm", elem_classes=["exit-button"])
-                        exit_btn.click(on_exit_lesson, inputs=[state_lessons], outputs=[state_cur_lesson, state_lessons])
+                        exit_btn.click(on_exit_lesson, inputs=[state_lessons, s_cur_meta], outputs=[state_cur_lesson, state_lessons])
 
                         gr.Markdown(f"## Lesson: {meta['name']}", elem_classes=["lesson-title"])
 
@@ -365,18 +443,18 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                     with gr.Row(min_height=10, elem_classes=["button-bar"]):
                         with gr.Column(scale=0, min_width=50):
                             btn = gr.Button("↺")
-                            btn.click(on_click_restart, inputs=[state_cur_meta], outputs=[state_cur_meta])
+                            btn.click(on_click_restart, inputs=[s_cur_meta], outputs=[s_cur_meta])
                         with gr.Column(scale=0, min_width=100):
                             btn = gr.Button("◀", interactive=progress_idx > 0)
-                            btn.click(on_click_prev, inputs=[state_cur_meta, s_progress_idx], outputs=[state_cur_meta])
+                            btn.click(on_click_prev, inputs=[s_cur_meta, s_progress_idx], outputs=[s_cur_meta])
                         with gr.Column(scale=0, min_width=120):
                             submit_btn = gr.Button("⏏ submit", elem_classes=["submit-button"])
-                            submit_btn.click(on_click_submit, inputs=[state_cur_meta, s_progress_idx, s_words] + inputs, outputs=[state_cur_meta, msg])
+                            submit_btn.click(on_click_submit, inputs=[s_cur_meta, s_progress_idx, s_words] + inputs, outputs=[s_cur_meta, msg])
                         with gr.Column(scale=0, min_width=100):
                             btn = gr.Button("▶", interactive=progress_idx < len(sheet)-1)
-                            btn.click(on_click_next, inputs=[state_cur_meta, s_progress_idx], outputs=[state_cur_meta])
+                            btn.click(on_click_next, inputs=[s_cur_meta, s_progress_idx], outputs=[s_cur_meta])
                         with gr.Column(scale=0, min_width=50):
                             btn = gr.Button("★", elem_classes="favourite-on" if is_favourite else "favourite-off")
-                            btn.click(on_click_favourite, inputs=[state_cur_meta, s_progress_idx], outputs=[state_cur_meta])
+                            btn.click(on_click_favourite, inputs=[s_cur_meta, s_progress_idx], outputs=[s_cur_meta])
 
 # endregion UI Components

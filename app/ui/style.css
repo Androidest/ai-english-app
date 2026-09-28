@@ -258,3 +258,40 @@
 .favourite-off {
     color: #000000;
 }
+
+.sort-buttons-bar {
+    gap: 0px;
+}
+
+.sort-btn
+{
+    color: #000000;
+    font-size: 14px;
+    font-weight: normal;
+}
+
+.sort-btn:hover {
+    background-color: #ecebeb;
+}
+
+.sort-btn-left {
+    border-radius: 8px 0 0 8px;
+    border-right: 1px solid #e2e2e2;
+}
+
+.sort-btn-right {
+    border-radius: 0 8px 8px 0;
+}
+
+.sort-btn-mid {
+    border-radius: 0;
+    border-right: 1px solid #e2e2e2;
+}
+
+.sort-btn-active {
+    background-color: #c7dbec;
+}
+
+.sort-btn-inactive {
+    background-color: #f7f7f7;
+}

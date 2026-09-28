@@ -19,6 +19,7 @@ class Sheet:
         
         self.excel_file_path = Path(excel_file_path)
         self.sheet_name = sheet_name
+        self.time_created = 0
         if (default_data or conlumns) and \
            (clear or not self.excel_file_path.exists()):
             if sheet_name is None:
@@ -28,6 +29,8 @@ class Sheet:
             try:
                 with pd.ExcelFile(self.excel_file_path) as excel_file:
                     sheet_names = excel_file.sheet_names
+                    self.time_created = os.path.getctime(self.excel_file_path)
+                    
                     for name in sheet_names:
                         if sheet_name is not None and name != sheet_name:
                             continue
