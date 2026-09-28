@@ -1,8 +1,36 @@
 .main-title h1 {
     font-size: 35px !important;
-    color: #5f4e46 !important;
+    color: #6d80a0 !important;
 }
 
+.cur-ai {
+    margin-top: 5px;
+    height: 37px;
+    border-radius: 8px;
+}
+
+.cur-ai::before {
+  content: "Current AI ";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #999;
+  font-size: 16px;
+  z-index: 1;
+  border-right: 2px solid #ececec;
+  padding-right: 10px;
+}
+
+.cur-ai input {
+    margin-left: 90px;
+    color: #2e2e2f !important;
+    font-size: 16px;
+    font-weight: normal;
+    height: 37px;
+    text-align: right;
+}
 
 .input-editing {
     background-color: #c1e9f5;
@@ -121,21 +149,34 @@
 }
 
 .exit-button {
-    min-width: 60px !important;
-    max-width: 60px !important;
-    min-height: 30px !important;
+    min-width: 70px !important;
+    max-width: 70px !important;
+    min-height: 37px !important;
     font-size: 15px !important;
     font-weight: bold !important;
 }
 
-.lesson-title h2 {
+.lesson-title {
+    max-height: fit-content;
+}
+
+.lesson-title p::before {
+    content: "📖";
+    font-size: 37px !important;
+    line-height: 1;
+    position: relative;
+    top: -2px;
+    margin-right: 5px;
+}
+
+.lesson-title p {
     color: #2196F3 !important;
-    font-size: 26px !important;
-    max-width: 50%;
-    max-height: 30px;
+    font-size: 30px !important;
+    max-height: fit-content;
     overflow: hidden;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
+    line-height: 1;
 }
 
 .lesson-content {
@@ -263,6 +304,10 @@
     gap: 0px;
 }
 
+.sort-buttons-bar .row {
+    gap: 0px;
+}
+
 .sort-btn
 {
     color: #000000;
@@ -294,4 +339,26 @@
 
 .sort-btn-inactive {
     background-color: #f7f7f7;
+}
+
+.search-box {
+    margin-left: 10px;
+    height: 37px;
+    border-radius: 8px;
+}
+
+.search-box::before {
+  content: "🔍︎";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #999;
+  font-size: 16px;
+  z-index: 1;
+}
+
+.search-box input {
+    margin-left: 30px;
 }

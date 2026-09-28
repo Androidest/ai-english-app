@@ -196,6 +196,12 @@ def sort_lessons(lessons: dict, sort_by: str) -> list[(str, dict)]:
         return sorted(lessons.items(), key=lambda item: item[0], reverse=True)
     return []
 
+def filter_lessons(lessons: dict, search: str) -> dict:
+    if search == "":
+        return lessons
+    else:
+        return { k: v for k, v in lessons.items() if search in k or search in v["name"] }
+        
 # endregion Meta Management Functions
 
 # region UI events
@@ -314,33 +320,38 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
 
         @gr.render(inputs=[state_lessons, state_cur_lesson])
         def render_tab(lessons: dict, cur_lesson: str):   
-            
-            print(f"cur_lesson: {cur_lesson}")
 
             if cur_lesson == "":
+                state_search = gr.State(value="")
+
                 # sorting bar
-                @gr.render(inputs=[state_cur_sort_by])
-                def render_tab(sort_by: str): 
-                    with gr.Row(scale=0, elem_classes=["sort-buttons-bar"]):
-                        
-                        types = [SORT_LATEST, SORT_OLDEST, SORT_ALPHA_A_Z, SORT_ALPHA_Z_A]
+                with gr.Row(scale=0, elem_classes=["sort-buttons-bar"]):
+                    with gr.Column(scale=0): # using column to limit the width
+                        with gr.Row(scale=0, elem_classes=["sort-buttons-bar"]): # if using row, @gr.render will copy a new row inside
+                            @gr.render(inputs=[state_cur_sort_by])
+                            def render_tab(sort_by: str): 
+                                types = [SORT_LATEST, SORT_OLDEST, SORT_ALPHA_A_Z, SORT_ALPHA_Z_A]
 
-                        for i, v in enumerate(types):
-                            style_active = "sort-btn-active" if v == sort_by else "sort-btn-inactive"
-                            style_pos = 'sort-btn-mid'
-                            if i == 0:
-                                style_pos = 'sort-btn-left'
-                            elif i == len(types) - 1:
-                                style_pos = 'sort-btn-right'
-                        
-                            b = gr.Button(v, scale=0, elem_classes=["sort-btn", style_active, style_pos], min_width=80) 
-                            b.click(on_click_sort_by, inputs=[gr.State(v)], outputs=[state_cur_sort_by])
+                                for i, v in enumerate(types):
+                                    style_active = "sort-btn-active" if v == sort_by else "sort-btn-inactive"
+                                    style_pos = 'sort-btn-mid'
+                                    if i == 0:
+                                        style_pos = 'sort-btn-left'
+                                    elif i == len(types) - 1:
+                                        style_pos = 'sort-btn-right'
+                                
+                                    b = gr.Button(v, scale=0, elem_classes=["sort-btn", style_active, style_pos], min_width=80) 
+                                    b.click(on_click_sort_by, inputs=[gr.State(v)], outputs=[state_cur_sort_by])
 
+                    t = gr.Textbox("", elem_classes=["search-box"], max_lines=1, scale=0, min_width=200, container=False, placeholder="Search")
+                    t.change(lambda x: x, inputs=[t], outputs=[state_search])
+                
                 # list of lessons
-                @gr.render(inputs=[state_lessons, state_cur_sort_by])
-                def render_tab(lessons: dict, sort_by: str):
+                @gr.render(inputs=[state_lessons, state_cur_sort_by, state_search])
+                def render_tab(lessons: dict, sort_by: str, search: str):
                     with gr.Row():
-                        sorted_lessons = sort_lessons(lessons, sort_by)
+                        filtered_lessons = filter_lessons(lessons, search)
+                        sorted_lessons = sort_lessons(filtered_lessons, sort_by)
 
                         for lesson_name, meta in sorted_lessons:
                             s_meta = gr.State(meta)
@@ -386,11 +397,11 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                     elif progress_idx >= len(sheet):
                         progress_idx = len(sheet)-1
 
-                    with gr.Row(min_height=80):
+                    with gr.Row(scale=0):
                         exit_btn = gr.Button("↩", variant="secondary", size="sm", elem_classes=["exit-button"])
                         exit_btn.click(on_exit_lesson, inputs=[state_lessons, s_cur_meta], outputs=[state_cur_lesson, state_lessons])
 
-                        gr.Markdown(f"## Lesson: {meta['name']}", elem_classes=["lesson-title"])
+                        gr.Markdown(f" {meta['name']}", elem_classes=["lesson-title"])
 
                     with gr.Row():
                         with gr.Column(elem_classes=["lesson-content"]):

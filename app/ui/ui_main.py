@@ -13,13 +13,13 @@ with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for
     with gr.Row():
         with gr.Column(scale=1):
             gr.Markdown("# Zeenom English", elem_classes=["main-title"], scale=1)
-        with gr.Column(scale=0, min_width=120):
+        with gr.Column(scale=0, min_width=200):
             @gr.render(inputs=[state_llm_configs, state_cur_llm])
             def render_items(llm_configs: list[dict], cur_llm: int):   
                 cur_llm_name = "-- Not Selected --"
                 if cur_llm != -1 and len(llm_configs) > cur_llm:
                     cur_llm_name = llm_configs[cur_llm]["alias"]
-                gr.Textbox(cur_llm_name, label="Current AI", scale=0)
+                gr.Textbox(cur_llm_name, elem_classes=["cur-ai"], max_lines=1, scale=0, min_width=200, container=False)
     
     with gr.Row():
         render_tab_lesson(state_lessons, state_cur_lesson, state_cur_sort_by, state_llm_configs, state_cur_llm)
