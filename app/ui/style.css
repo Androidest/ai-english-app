@@ -89,12 +89,13 @@
     z-index: 1 !important;
 }
 
-.lesson-click-button {
+.card-click-button {
     position: absolute !important;
     inset: 0 !important;
     width: 100% !important;
     height: 100% !important;
     opacity: 0 !important;
+    padding: 0 !important;
 }
 
 .clickable-item {
@@ -106,28 +107,27 @@
     background-color:#e5e6ef;
 }
 
-.lesson-item {
+.card-item {
     min-width: 150px !important;
     height: 200px !important;
     gap: 0;
-    padding: 12px;
 }
 
-.lesson-item-bg {
+.card-item-bg {
     background-color:#f1f1f1;;
 }
 
-.lesson-name-wrapper {
+.card-name-wrapper {
     overflow-y: auto;
     scrollbar-width: None;
     width: 100%;
-    height: 70%;
-    max-height: 70%;
+    height: 65%;
+    max-height: 65%;
     box-sizing: border-box;
     z-index: 1;
 }
 
-.lesson-name {
+.card-name {
     min-height: 100%;
     display: flex ;
     align-items: center;
@@ -135,34 +135,52 @@
     text-align: center;
 }
 
-.lesson-meta {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    width: 100%;
-    height: 30%;
-    max-height: 30%;
+.card-name p {
+    line-height: 1.2;
+    font-weight: bold !important;
+    font-size: 14px !important;
+    color: #266598 !important;
+}
+
+.card-meta-passed {
+    margin-top: 5px;
     box-sizing: border-box;
     text-align: center;
+    line-height: 1;
 }
+
+.card-meta-passed p {
+    color: #3bad52 !important;
+}
+
+.card-meta-favourite {
+    box-sizing: border-box;
+    text-align: center;
+    line-height: 1;
+}
+
+.card-meta-favourite p {
+    color: #e2a408 !important;
+}
+
 
 .exit-button {
     min-width: 70px !important;
     max-width: 70px !important;
-    min-height: 37px !important;
+    min-height: 42px !important;
     font-size: 15px !important;
     font-weight: bold !important;
 }
 
 .lesson-title {
     max-height: fit-content;
+    width: stretch !important;
+    min-width: None;
 }
 
 .lesson-title p::before {
     content: "📖";
-    font-size: 37px !important;
+    font-size: 42px !important;
     line-height: 1;
     position: relative;
     top: -2px;
@@ -170,13 +188,23 @@
 }
 
 .lesson-title p {
-    color: #2196F3 !important;
-    font-size: 30px !important;
+    color: #266598 !important;
+    font-size: 33px !important;
     max-height: fit-content;
     overflow: hidden;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
     line-height: 1;
+}
+
+.lesson-meta {
+    min-width: fit-content !important;
+    border-radius: 25px;
+}
+
+.lesson-meta input{
+    field-sizing: content !important;
+    font-size: 16px !important;
 }
 
 .lesson-content {

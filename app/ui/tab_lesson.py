@@ -110,7 +110,7 @@ def create_default_meta(lesson_name: str, sheet: Sheet) -> dict:
         "progress_idx": 0, 
         "phrases_flag": {},
     }
-    meta = make_brief_meta(meta, sheet)
+    meta = make_brief_meta(meta, len(sheet))
     return meta
 
 def save_meta(meta: dict, override_all: bool = False):
@@ -149,14 +149,21 @@ def delete_meta(lesson_name: str):
     if path.exists():
         path.unlink()
 
-def make_brief_meta(meta: dict, sheet: Sheet) -> dict:
-    meta["total"] = len(sheet)
+def make_brief_meta(meta: dict, total: int = None) -> dict:
+    if total is not None:
+        meta["total"] = total
 
     correct_count = 0
-    for idx in range(0, meta["total"]):
+    favourite_count = 0
+
+    for idx in meta["phrases_flag"].keys():
         if is_phrase_passed(meta, idx):
             correct_count += 1
+        if is_phrase_favourite(meta, idx):
+            favourite_count += 1
+
     meta["correct_count"] = correct_count
+    meta["favourite_count"] = favourite_count
 
     return meta
 
@@ -287,6 +294,7 @@ def on_click_submit(meta: dict, progress_idx: int, words: list[str], *inputs):
         message = PASSED_MSG
         new_meta = meta.copy()
         new_meta = set_pass_phrase(new_meta, progress_idx, True)
+        new_meta = make_brief_meta(new_meta)
         save_meta(new_meta)
         return new_meta, message
 
@@ -295,6 +303,7 @@ def on_click_submit(meta: dict, progress_idx: int, words: list[str], *inputs):
 def on_click_favourite(meta: dict, progress_idx: int):
     meta = meta.copy()
     meta = toggle_phrase_favorite(meta, progress_idx)
+    meta = make_brief_meta(meta)
     save_meta(meta)
     return meta
 
@@ -307,6 +316,7 @@ def on_click_restart(meta: dict):
         for idx, flag in meta["phrases_flag"].items() if flag != IS_PASSED
     }
     meta["progress_idx"] = 0 # back to the first phrase
+    meta = make_brief_meta(meta)
     save_meta(meta)
     return meta
 
@@ -320,6 +330,9 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
 
         @gr.render(inputs=[state_lessons, state_cur_lesson])
         def render_tab(lessons: dict, cur_lesson: str):   
+
+            if cur_lesson == None:
+                return
 
             if cur_lesson == "":
                 state_search = gr.State(value="")
@@ -356,30 +369,29 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                         for lesson_name, meta in sorted_lessons:
                             s_meta = gr.State(meta)
 
-                            with gr.Column(variant="panel", elem_classes=["clickable-item", "lesson-item", "lesson-item-bg"], scale=0):
+                            with gr.Column(variant="panel", elem_classes=["clickable-item", "card-item", "card-item-bg"], scale=0):
                                 # invisible button to trigger click event for the entire item card
-                                with gr.Row(scale=0, elem_classes=["lesson-name-wrapper"]):
-                                    gr.Markdown(f"### {lesson_name}", elem_classes=["lesson-name"], scale=0, line_breaks=True)
-                                    item_btn1 = gr.Button("", elem_classes=["lesson-click-button"])
+                                with gr.Row(scale=0, elem_classes=["card-name-wrapper"]):
+                                    gr.Markdown(f"{lesson_name}", elem_classes=["card-name"], scale=0, line_breaks=True)
+                                    item_btn1 = gr.Button("", elem_classes=["card-click-button"])
                                     item_btn1.click(
                                         on_choose_lesson,
                                         inputs=[s_meta],
                                         outputs=[state_cur_lesson],
                                     )
+                                gr.Markdown(f"⫶☰ {meta['correct_count']}/{meta['total']}", elem_classes=["card-meta-passed"], scale=0)
+                                gr.Markdown(f"★ {meta['favourite_count']}", elem_classes=["card-meta-favourite"], scale=0)
 
-                                # TODO: render meta
-                                gr.Markdown(f"{meta['progress_idx']}", elem_classes=["lesson-meta"], scale=0, line_breaks=True)
-
-                                item_btn = gr.Button("", elem_classes=["lesson-click-button"])
+                                item_btn = gr.Button("", elem_classes=["card-click-button"])
                                 item_btn.click(
                                     on_choose_lesson,
                                     inputs=[s_meta],
                                     outputs=[state_cur_lesson],
                                 )
                                 
-                        with gr.Column(variant="panel", elem_classes=["lesson-item"], scale=0):
+                        with gr.Column(variant="panel", elem_classes=["card-item"], scale=0):
                             # the last item is the add button
-                            add_btn = gr.Button("➕", variant="secondary", elem_classes=["lesson-item"]) 
+                            add_btn = gr.Button("➕", variant="secondary", elem_classes=["card-item"]) 
                             add_btn.click(on_click_add_lesson, outputs=[])
 
             else:
@@ -397,11 +409,14 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                     elif progress_idx >= len(sheet):
                         progress_idx = len(sheet)-1
 
-                    with gr.Row(scale=0):
-                        exit_btn = gr.Button("↩", variant="secondary", size="sm", elem_classes=["exit-button"])
+                    with gr.Row():
+                        exit_btn = gr.Button("↩", variant="secondary", size="sm", elem_classes=["exit-button"], scale=0)
                         exit_btn.click(on_exit_lesson, inputs=[state_lessons, s_cur_meta], outputs=[state_cur_lesson, state_lessons])
 
-                        gr.Markdown(f" {meta['name']}", elem_classes=["lesson-title"])
+                        gr.Markdown(f"{meta['name']}", scale=1, elem_classes=["lesson-title"])
+                        gr.Textbox(f"Page: {progress_idx+1}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
+                        gr.Textbox(f"⫶☰ Passed: {meta['correct_count']} / {meta['total']}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
+                        gr.Textbox(f"★ Favourite: {meta['favourite_count']}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
 
                     with gr.Row():
                         with gr.Column(elem_classes=["lesson-content"]):
