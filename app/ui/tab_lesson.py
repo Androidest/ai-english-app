@@ -217,10 +217,16 @@ def on_click_sort_by(cur_sort_by: str):
     save_cache({ "cur_sort_by": cur_sort_by })
     return cur_sort_by
 
-def on_delete_lesson(cur_lesson: str):
-    delete_sheet(cur_lesson)
-    delete_meta(cur_lesson)
-    return ""
+def on_delete_lesson(lessons: dict, meta: dict) -> tuple:
+    new_cur_lesson = "" # deselect the current lesson, back to the lessons list
+    lesson_name = meta["name"]
+    new_lessons = lessons.copy() 
+    del new_lessons[lesson_name]
+    delete_sheet(lesson_name)
+    delete_meta(lesson_name)
+    save_cache({ "cur_lesson": new_cur_lesson })
+
+    return new_lessons, new_cur_lesson
 
 def on_confirm_add_lesson(old_lessons: dict, lesson_name: str):
     # generate lesson data
@@ -252,7 +258,7 @@ def on_exit_lesson(lessons: dict, meta: dict) -> tuple:
     new_cur_lesson = ""
     save_cache({ "cur_lesson": new_cur_lesson })
     
-    return new_cur_lesson, new_lessons # cur_meta is empty when no lesson is selected, back to the lessons list
+    return new_lessons, new_cur_lesson # cur_meta is empty when no lesson is selected, back to the lessons list
 
 def on_click_prev(meta: dict, progress_idx: int):
     meta = update_progress(meta.copy(), progress_idx - 1)
@@ -409,14 +415,16 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                     elif progress_idx >= len(sheet):
                         progress_idx = len(sheet)-1
 
-                    with gr.Row():
+                    with gr.Row(elem_classes=["lesson-title-bar"]):
                         exit_btn = gr.Button("↩", variant="secondary", size="sm", elem_classes=["exit-button"], scale=0)
-                        exit_btn.click(on_exit_lesson, inputs=[state_lessons, s_cur_meta], outputs=[state_cur_lesson, state_lessons])
+                        exit_btn.click(on_exit_lesson, inputs=[state_lessons, s_cur_meta], outputs=[state_lessons, state_cur_lesson])
 
                         gr.Markdown(f"{meta['name']}", scale=1, elem_classes=["lesson-title"])
                         gr.Textbox(f"Page: {progress_idx+1}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
                         gr.Textbox(f"⫶☰ Passed: {meta['correct_count']} / {meta['total']}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
                         gr.Textbox(f"★ Favourite: {meta['favourite_count']}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
+                        btn = gr.Button("⛔", scale=0, elem_classes=["lesson-delete-btn"])
+                        btn.click(on_delete_lesson, inputs=[state_lessons, s_cur_meta], outputs=[state_lessons, state_cur_lesson])
 
                     with gr.Row():
                         with gr.Column(elem_classes=["lesson-content"]):

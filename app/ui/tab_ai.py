@@ -205,7 +205,7 @@ def render_tab_ai(state_llm_configs: gr.State, state_cur_llm: gr.State):
                                 )
 
                                 # both have delete button
-                                del_btn = gr.Button("🗑️", variant="stop")
+                                del_btn = gr.Button("⛔")
                                 del_btn.click(
                                     on_delete_item, 
                                     inputs=[gr.State(idx), state_llm_configs], 

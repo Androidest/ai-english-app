@@ -172,6 +172,10 @@
     font-weight: bold !important;
 }
 
+.lesson-title-bar {
+    gap: 5px;
+}
+
 .lesson-title {
     max-height: fit-content;
     width: stretch !important;
@@ -200,6 +204,24 @@
 .lesson-meta {
     min-width: fit-content !important;
     border-radius: 25px;
+}
+
+.lesson-delete-btn {
+    font-size: 20px;
+    font-weight: normal;
+    border: 0px;
+    height: 42px;
+    min-width: 50px;
+    border-radius: 5px;
+    line-height: 1;
+}
+
+.lesson-delete-btn:hover {
+    background-color: #e39696;
+}
+
+.lesson-delete-btn p {
+    color: #fff;
 }
 
 .lesson-meta input{
