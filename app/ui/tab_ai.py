@@ -3,6 +3,7 @@ from app.utils.llm_config import LLMConfig
 from app.utils.paths import PATH_LLMS
 import json
 import time
+from app.ui.confirm_dialog import ConfirmDialog
 
 PATH_CUR_LLM = PATH_LLMS / "cur_llm.txt"
 
@@ -115,7 +116,7 @@ def on_click_item(i, items, old_cur_llm):
     save_cur_llm(i)
     return i, items
 
-def render_tab_ai(state_llm_configs: gr.State, state_cur_llm: gr.State):
+def render_tab_ai(state_llm_configs: gr.State, state_cur_llm: gr.State, confirm_dialog: ConfirmDialog):
     with gr.Tab("AIs") as tab_ai:
         
         # list of llms
@@ -206,11 +207,18 @@ def render_tab_ai(state_llm_configs: gr.State, state_cur_llm: gr.State):
 
                                 # both have delete button
                                 del_btn = gr.Button("⛔")
-                                del_btn.click(
-                                    on_delete_item, 
-                                    inputs=[gr.State(idx), state_llm_configs], 
-                                    outputs=[state_llm_configs],
-                                ) 
+                                confirm_dialog.attach(
+                                        del_btn,
+                                        inputs=[gr.State(idx), state_llm_configs],
+                                        message=f"Are you sure you want to delete<br>\"<span>{alias}</span>\" ?<br>This cannot be undone!",
+                                        confirm_text="Delete",
+                                        cancel_text="Cancel",
+                                        danger=True,
+                                    ).on_confirm(
+                                        on_delete_item,
+                                        outputs=[state_llm_configs],
+                                    )
+
                         else:
                             gr.Markdown('<span style="color:green; font-weight:bold;">Using</span>')
 

@@ -32,6 +32,79 @@
     text-align: right;
 }
 
+.dialog-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+
+    width: 100vw !important;
+    height: 100vh !important;
+
+    background: rgba(0, 0, 0, 0.1) !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    z-index: 99999 !important;
+    margin: 0 !important;
+}
+
+.dialog-overlay .styler {
+    background: transparent 
+}
+
+.dialog-modal {
+    padding: 35px 35px 25px 35px!important;
+    width: 100% !important;
+    max-width: 400px !important;
+    box-sizing: border-box !important;
+
+    background: var(--background-fill-primary) !important;
+    border: 1px solid var(--border-color-primary);
+    border-radius: 16px !important;
+}
+
+.dialog-message {
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.dialog-message p {
+    font-size: 18px;
+    color: #4d4d4d !important;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.dialog-message span {
+    font-size: 18px;
+    color: #397ae2 !important;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.dialog-confirm-btn {
+    margin-right: 20px;
+    border-radius: 25px;
+    font-weight: normal;
+}
+
+.dialog-confirm-danger {
+    background-color: #393939;
+    color: #fff;
+}
+
+.dialog-confirm-normal {
+    background-color: #e4e4e7;
+    color: #000000;
+}
+
+.dialog-cancel-btn {
+    margin-left: 20px;
+    font-weight: normal;
+    border-radius: 25px;
+}
+
 .input-editing {
     background-color: #c1e9f5;
 }

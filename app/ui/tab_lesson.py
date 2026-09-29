@@ -1,6 +1,7 @@
 import gradio as gr
 from app.utils.paths import PATH_LESSONS
 from app.utils.sheet import Sheet
+from app.ui.confirm_dialog import ConfirmDialog
 import json
 
 IS_FAVORITE = 0b01
@@ -225,6 +226,7 @@ def on_delete_lesson(lessons: dict, meta: dict) -> tuple:
     delete_sheet(lesson_name)
     delete_meta(lesson_name)
     save_cache({ "cur_lesson": new_cur_lesson })
+    gr.Info(f"⛔ Lesson {lesson_name} deleted successfully! ⛔")
 
     return new_lessons, new_cur_lesson
 
@@ -330,7 +332,13 @@ def on_click_restart(meta: dict):
 
 # region UI Components
 
-def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state_cur_sort_by: gr.State, state_llm_configs: gr.State, state_cur_llm: gr.State):
+def render_tab_lesson(
+        state_lessons: gr.State, 
+        state_cur_lesson: gr.State, 
+        state_cur_sort_by: gr.State, 
+        state_llm_configs: gr.State, 
+        state_cur_llm: gr.State, 
+        confirm_dialog: ConfirmDialog):
 
     with gr.Tab("Lessons"):
 
@@ -423,8 +431,19 @@ def render_tab_lesson(state_lessons: gr.State, state_cur_lesson: gr.State, state
                         gr.Textbox(f"Page: {progress_idx+1}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
                         gr.Textbox(f"⫶☰ Passed: {meta['correct_count']} / {meta['total']}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
                         gr.Textbox(f"★ Favourite: {meta['favourite_count']}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
+
                         btn = gr.Button("⛔", scale=0, elem_classes=["lesson-delete-btn"])
-                        btn.click(on_delete_lesson, inputs=[state_lessons, s_cur_meta], outputs=[state_lessons, state_cur_lesson])
+                        confirm_dialog.attach(
+                                trigger=btn, 
+                                inputs=[state_lessons, s_cur_meta],
+                                message=f"Are you sure you want to delete <br>\"<span>{meta['name']}</span>\" ? <br>This action cannot be undone!",
+                                confirm_text="Delete",
+                                cancel_text="Cancel",
+                                danger=True,
+                            ).on_confirm(
+                                on_delete_lesson, 
+                                outputs=[state_lessons, state_cur_lesson], 
+                            )
 
                     with gr.Row():
                         with gr.Column(elem_classes=["lesson-content"]):

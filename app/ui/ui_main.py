@@ -1,6 +1,7 @@
 import gradio as gr
 from app.ui.tab_ai import render_tab_ai, load_llm_configs
 from app.ui.tab_lesson import render_tab_lesson, load_lessons
+from app.ui.confirm_dialog import ConfirmDialog
 
 with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for hot reloading
     # region UI Components
@@ -9,6 +10,8 @@ with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for
     state_cur_sort_by = gr.State(value="")
     state_llm_configs = gr.State(value=[])
     state_cur_llm = gr.State(value=-1)
+
+    confirm_dialog = ConfirmDialog()
 
     with gr.Row():
         with gr.Column(scale=1):
@@ -20,11 +23,10 @@ with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for
                 if cur_llm != -1 and len(llm_configs) > cur_llm:
                     cur_llm_name = llm_configs[cur_llm]["alias"]
                 gr.Textbox(cur_llm_name, elem_classes=["cur-ai"], max_lines=1, scale=0, min_width=200, container=False)
-    
+
     with gr.Row():
-        render_tab_lesson(state_lessons, state_cur_lesson, state_cur_sort_by, state_llm_configs, state_cur_llm)
-        render_tab_ai(state_llm_configs, state_cur_llm)
-        
+        render_tab_lesson(state_lessons, state_cur_lesson, state_cur_sort_by, state_llm_configs, state_cur_llm, confirm_dialog)
+        render_tab_ai(state_llm_configs, state_cur_llm, confirm_dialog)
 
     def on_load():
         lessons, cur_lesson, cur_sort_by = load_lessons()
