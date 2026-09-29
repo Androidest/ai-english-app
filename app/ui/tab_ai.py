@@ -209,14 +209,15 @@ def render_tab_ai(state_llm_configs: gr.State, state_cur_llm: gr.State, confirm_
                                 del_btn = gr.Button("⛔")
                                 confirm_dialog.attach(
                                         del_btn,
-                                        inputs=[gr.State(idx), state_llm_configs],
+                                        
                                         message=f"Are you sure you want to delete<br>\"<span>{alias}</span>\" ?<br>This cannot be undone!",
                                         confirm_text="Delete",
                                         cancel_text="Cancel",
                                         danger=True,
-                                    ).on_confirm(
-                                        on_delete_item,
-                                        outputs=[state_llm_configs],
+
+                                        confirm_fn=on_delete_item,
+                                        confirm_inputs=[gr.State(idx), state_llm_configs],
+                                        confirm_outputs=[state_llm_configs],
                                     )
 
                         else:

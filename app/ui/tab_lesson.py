@@ -435,14 +435,15 @@ def render_tab_lesson(
                         btn = gr.Button("⛔", scale=0, elem_classes=["lesson-delete-btn"])
                         confirm_dialog.attach(
                                 trigger=btn, 
-                                inputs=[state_lessons, s_cur_meta],
+                                
                                 message=f"Are you sure you want to delete <br>\"<span>{meta['name']}</span>\" ? <br>This action cannot be undone!",
                                 confirm_text="Delete",
                                 cancel_text="Cancel",
                                 danger=True,
-                            ).on_confirm(
-                                on_delete_lesson, 
-                                outputs=[state_lessons, state_cur_lesson], 
+
+                                confirm_fn=on_delete_lesson, 
+                                confirm_inputs=[state_lessons, s_cur_meta],
+                                confirm_outputs=[state_lessons, state_cur_lesson], 
                             )
 
                     with gr.Row():
