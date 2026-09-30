@@ -13,7 +13,7 @@ class Tab_AI:
         with gr.Tab("AIs") as tab_ai:
             # list of llms
             @gr.render(inputs=[state_llms.configs, state_llms.cur_llm])
-            def render_items(items: list[dict], cur_llm: int):
+            def render_list(items: list[dict], cur_llm: int):
                 # render all the llm config items
                 for idx, item in enumerate(items):
     

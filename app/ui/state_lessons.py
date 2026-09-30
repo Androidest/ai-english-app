@@ -72,7 +72,7 @@ class State_Lessons:
 
     # region sheet Management Functions
 
-    def generate_sheet(self, lesson_name: str):
+    def generate_sheet(self, lesson_name: str, prompts: str, llm_config: dict):
         # TODO
         sheet = Sheet(PATH_LESSONS / f"{lesson_name}.xlsx", default_data={'EN':[], 'CN':[], 'ID':[]}, dtype=str)
         sheet[0, "EN"] = "hello"

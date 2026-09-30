@@ -7,6 +7,8 @@
     margin-top: 5px;
     height: 37px;
     border-radius: 8px;
+    border-width: 2px;
+    min-width: fit-content !important;
 }
 
 .cur-ai::before {
@@ -29,7 +31,8 @@
     font-size: 16px;
     font-weight: normal;
     height: 37px;
-    text-align: right;
+    text-align: left;
+    field-sizing: content;
 }
 
 .dialog-overlay {
@@ -55,13 +58,17 @@
 
 .dialog-panel {
     padding: 35px 35px 25px 35px!important;
-    width: 100% !important;
-    max-width: 400px !important;
+    /* width: 100% !important; */
+    max-width: 500px !important;
     box-sizing: border-box !important;
 
     background: var(--background-fill-primary) !important;
     border: 1px solid var(--border-color-primary);
     border-radius: 16px !important;
+}
+
+.gen-dialog-panel {
+    min-width: 600px !important;
 }
 
 .dialog-message {

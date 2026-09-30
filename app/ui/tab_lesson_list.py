@@ -1,12 +1,14 @@
 import gradio as gr
 from app.ui.state_llms import State_LLMs
 from app.ui.state_lessons import State_Lessons, SORT_ALPHA_A_Z, SORT_ALPHA_Z_A, SORT_LATEST, SORT_OLDEST
+from app.ui.gen_lesson_dialog import GenLessonDialog
 
 class Tab_Lesson_List:
     def __init__(
             self, 
             state_lessons: State_Lessons, 
             state_llms: State_LLMs,
+            gen_lesson_dialog: GenLessonDialog,
         ):
 
         self.state_lessons = state_lessons
@@ -63,31 +65,15 @@ class Tab_Lesson_List:
                             inputs=[s_meta],
                             outputs=[state_lessons.cur_lesson],
                         )
-                        
+
                 with gr.Column(variant="panel", elem_classes=["card-item"], scale=0):
                     # the last item is the add button
                     add_btn = gr.Button("➕", variant="secondary", elem_classes=["card-item"]) 
-                    add_btn.click(self.on_click_add_lesson, outputs=[])
+                    gen_lesson_dialog.attach(add_btn)
 
     def on_click_sort_by(self, cur_sort_by: str):
             self.state_lessons.save_cache({ "cur_sort_by": cur_sort_by })
             return cur_sort_by
-    
-    def on_confirm_add_lesson(self, old_lessons: dict, lesson_name: str):
-        # generate lesson data
-        sheet = self.state_lessons.generate_sheet(lesson_name)
-
-        new_lessons = old_lessons.copy()
-        new_lessons[lesson_name] = self.state_lessons.create_default_meta(lesson_name, sheet)
-
-        self.state_lessons.save_sheet(sheet)
-        self.state_lessons.save_meta(new_lessons[lesson_name], override_all=True)
-
-        return new_lessons, lesson_name
-
-    def on_click_add_lesson(self):
-        # TODO
-        return
 
     def on_choose_lesson(self, meta: dict) -> tuple:
         lesson_name = meta["name"]
