@@ -3,8 +3,9 @@ from app.utils.llm_config import LLMConfig
 from app.utils.paths import PATH_LLMS
 import json
 
+PATH_CUR_LLM = PATH_LLMS / "cur_llm.txt"
+
 class State_LLMs:
-    PATH_CUR_LLM = PATH_LLMS / "cur_llm.txt"
 
     def __init__(self):
         self.configs = gr.State(value=[])
@@ -25,8 +26,8 @@ class State_LLMs:
 
             sorted(configs, key=lambda x: x["id"])
 
-        if self.PATH_CUR_LLM.exists():
-            with open(self.PATH_CUR_LLM, "r", encoding="utf-8") as f:
+        if PATH_CUR_LLM.exists():
+            with open(PATH_CUR_LLM, "r", encoding="utf-8") as f:
                 cur_llm = int(f.read())
         else:
             if len(configs) > 0:
@@ -48,7 +49,7 @@ class State_LLMs:
             f.write(json.dumps(config.model_dump(), ensure_ascii=False, indent=4))
 
     def save_cur_llm(self, cur_llm: int):
-        with open(self.PATH_CUR_LLM, "w", encoding="utf-8") as f:
+        with open(PATH_CUR_LLM, "w", encoding="utf-8") as f:
             f.write(str(cur_llm))
 
     def delete_item(self, item: dict):

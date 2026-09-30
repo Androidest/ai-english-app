@@ -1,15 +1,16 @@
 import gradio as gr
-from app.ui.tab_lesson import render_tab_lesson, load_lessons
+
+from app.ui.state_llms import State_LLMs
+from app.ui.state_lessons import State_Lessons
+
 from app.ui.confirm_dialog import ConfirmDialog
 from app.ui.tab_ai import Tab_AI
-from app.ui.state_llms import State_LLMs
+from app.ui.tab_lesson import Tab_Lesson
 
 with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for hot reloading
-    # region UI Components
-    state_lessons = gr.State(value={})
-    state_cur_lesson = gr.State(value=None)
-    state_cur_sort_by = gr.State(value="")
+    
     state_llms = State_LLMs()
+    state_lessons = State_Lessons()
 
     confirm_dialog = ConfirmDialog()
 
@@ -25,17 +26,15 @@ with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for
                 gr.Textbox(cur_llm_name, elem_classes=["cur-ai"], max_lines=1, scale=0, min_width=200, container=False)
 
     with gr.Row():
-        render_tab_lesson(state_lessons, state_cur_lesson, state_cur_sort_by, state_llms.configs, state_llms.cur_llm, confirm_dialog)
+        Tab_Lesson(state_lessons, state_llms, confirm_dialog)
         Tab_AI(state_llms, confirm_dialog)
 
     def on_load():
-        outs = load_lessons()
+        outs = state_lessons.load_to_outputs()
         outs += state_llms.load_to_outputs()
-
         print("Loading Finished")
         return outs
 
-    outputs = [state_lessons, state_cur_lesson, state_cur_sort_by] 
+    outputs = state_lessons.outputs()
     outputs += state_llms.outputs()
-
     demo.load(on_load, outputs=outputs)    
