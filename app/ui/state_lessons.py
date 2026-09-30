@@ -72,12 +72,13 @@ class State_Lessons:
 
     # region sheet Management Functions
 
-    def generate_sheet(self, lesson_name: str, prompts: str, llm_config: dict):
+    def generate_sheet(self, lesson_name: str, pages, prompts: str, llm_config: dict):
         # TODO
         sheet = Sheet(PATH_LESSONS / f"{lesson_name}.xlsx", default_data={'EN':[], 'CN':[], 'ID':[]}, dtype=str)
-        sheet[0, "EN"] = "hello"
-        sheet[0, "CN"] = "你好"
-        sheet[0, "ID"] = "halo"
+        for i in range(0, pages):
+            sheet[i, "EN"] = "hello"
+            sheet[i, "CN"] = "你好"
+            sheet[i, "ID"] = "halo"
         return sheet
 
     def save_sheet(self, sheet: Sheet):

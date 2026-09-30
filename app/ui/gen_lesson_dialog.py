@@ -31,6 +31,15 @@ class GenLessonDialog:
                     max_lines=1
                 )
 
+                pages = gr.Number(
+                    50, 
+                    label="Pages", 
+                    placeholder="Target page count", 
+                    precision=0,
+                    scale=1, 
+                    interactive=True, 
+                )
+
                 prompts = gr.TextArea (
                     "", 
                     label="Prompts", 
@@ -70,7 +79,8 @@ class GenLessonDialog:
                             state_llms.configs, 
                             state_llms.cur_llm, 
                             name, 
-                            prompts
+                            pages,
+                            prompts,
                         ],
                         outputs=[state_lessons.metas, msg, self.panel],
                     )
@@ -98,6 +108,7 @@ class GenLessonDialog:
             llm_configs: list, 
             cur_llm: str, 
             name: str, 
+            pages: int,
             prompts: str
         ) -> dict[str, dict]:
 
@@ -110,6 +121,9 @@ class GenLessonDialog:
         elif (PATH_LESSONS / f"{name}.xlsx").exists():
             error = ERROR_TEMPLATE.format(msg=f"Lesson with the name '{name}' already exists.")
 
+        elif pages == None or pages <= 0:
+            error = ERROR_TEMPLATE.format(msg="Pages should be a number bigger than 0.")
+
         elif prompts == "":
             error = ERROR_TEMPLATE.format(msg="Prompts is required!")
 
@@ -119,11 +133,12 @@ class GenLessonDialog:
         if error == "":
             print(f"[Lesson Generator]")
             print(f"Lesson Name: {name}")
+            print(f"Pages: {pages}")
             print(f"Prompts: {prompts}")
             print(f"LLM: {cur_llm}", llm_configs[cur_llm])
             print("Start generating lesson...")
             
-            sheet = self.state_lessons.generate_sheet(name, prompts, llm_configs[cur_llm])
+            sheet = self.state_lessons.generate_sheet(name, pages, prompts, llm_configs[cur_llm])
 
             metas = metas.copy()
             metas[name] = self.state_lessons.create_default_meta(name, sheet)
