@@ -21,24 +21,25 @@ class GenLessonDialog:
                     if cur_llm != -1 and len(llm_configs) > cur_llm:
                         cur_llm_name = llm_configs[cur_llm]["alias"]
                     gr.Textbox(cur_llm_name, elem_classes=["cur-ai"], max_lines=1, scale=1, container=False)
-                    
-                name = gr.Textbox (
-                    "", 
-                    label="Name", 
-                    placeholder="Lesson name", 
-                    scale=1, 
-                    interactive=True, 
-                    max_lines=1
-                )
 
-                pages = gr.Number(
-                    50, 
-                    label="Pages", 
-                    placeholder="Target page count", 
-                    precision=0,
-                    scale=1, 
-                    interactive=True, 
-                )
+                with gr.Row():
+                    name = gr.Textbox (
+                        "", 
+                        label="Name", 
+                        placeholder="Lesson name", 
+                        scale=1, 
+                        interactive=True, 
+                        max_lines=1
+                    )
+
+                    pages = gr.Number(
+                        50, 
+                        label="Pages", 
+                        placeholder="Target page count", 
+                        precision=0,
+                        scale=1, 
+                        interactive=True, 
+                    )
 
                 prompts = gr.TextArea (
                     "", 
