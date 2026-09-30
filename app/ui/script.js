@@ -1,5 +1,31 @@
 console.log("[script.js] loaded");
 
+const COLOR_INCORRECT = "#e39696";
+const COLOR_CORRECT = "#47c7b8";
+const COLOR_PARTIALLY_CORRECT = "#4783c7";
+const COLOR_PARTIALLY_CORRECT_CASE = "#e4ba4d";
+
+function update_input_color(val, target_word, input) {
+    const partial_target = target_word.substring(0, val.length);
+    let color = COLOR_INCORRECT;
+
+    if (val == target_word) {
+        color = COLOR_CORRECT;
+    }
+
+    else if (val.length > 0 && val == partial_target) {
+        color = COLOR_PARTIALLY_CORRECT;
+    }
+    
+    else if (val.length > 0 && partial_target.toLowerCase() == val.toLowerCase()) {
+        color = COLOR_PARTIALLY_CORRECT_CASE;
+    }
+
+    input.style.color = color;
+    input.style.borderColor = color;
+    return color;
+}
+
 window.updateTextboxes = function (words) {
     const textboxes = document.querySelectorAll(".word");
     const canvas = document.createElement("canvas");
@@ -24,30 +50,11 @@ window.updateTextboxes = function (words) {
         container.style.minWidth = `calc(${width}px + ${style.paddingLeft} + ${style.paddingRight})`;
         
         // Update the text color of the input according to the correctness of the input
-        const COLOR_INCORRECT = "#e39696";
-        const COLOR_CORRECT = "#47c7b8";
-        const COLOR_PARTIALLY_CORRECT = "#4783c7";
-        const COLOR_PARTIALLY_CORRECT_CASE = "#e4ba4d";
+        update_input_color(input.value, target_word, input)
         
         input.oninput = (e)=> {
-            const val = e.target.value;
-            const partial_target = target_word.substring(0, val.length);
-            let color = COLOR_INCORRECT;
 
-            if (val == target_word) {
-                color = COLOR_CORRECT;
-            }
-
-            else if (val.length > 0 && val == partial_target) {
-                color = COLOR_PARTIALLY_CORRECT;
-            }
-            
-            else if (val.length > 0 && partial_target.toLowerCase() == val.toLowerCase()) {
-                color = COLOR_PARTIALLY_CORRECT_CASE;
-            }
-
-            input.style.color = color;
-            input.style.borderColor = color;
+            color = update_input_color(e.target.value, target_word, input)
 
             // Update the tip bubbles
             const tip_bubbles = document.querySelectorAll(".tip-bubble");
