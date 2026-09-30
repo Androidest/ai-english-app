@@ -29,6 +29,7 @@ class Tab_Lesson_Chosen:
             page_percent = (meta['progress_idx'] + 1) / meta["total"] * 100
             is_passed = state_lessons.is_phrase_passed(meta, progress_idx)
             is_favourite = state_lessons.is_phrase_favourite(meta, progress_idx)
+            s_progress_idx = gr.State(progress_idx)
 
             if progress_idx < 0:
                 progress_idx = 0
@@ -64,6 +65,7 @@ class Tab_Lesson_Chosen:
                         confirm_outputs=[state_lessons.metas, state_lessons.cur_lesson], 
                     )
 
+            inputs = []
             with gr.Row():
                 with gr.Column(elem_classes=["lesson-content"]):
                     en = sheet[progress_idx, "EN"]
@@ -75,7 +77,6 @@ class Tab_Lesson_Chosen:
 
                     words = []
                     all = []
-                    inputs = []
                     with gr.Row(elem_classes=["phrase-en"]) as row:
                         for i, word in enumerate(en.split(' ')):
                             word = word.strip()
@@ -88,12 +89,30 @@ class Tab_Lesson_Chosen:
                             words.append(word)
                             all.append(word)
 
-                            input = gr.Textbox(word if is_passed else "", max_lines=1, scale=0, min_width=10, container=False, elem_classes=["word", "text-input"], interactive=True, max_length=len(word))
+                            input = gr.Textbox(
+                                word if is_passed else "", 
+                                max_lines=1, 
+                                scale=0, 
+                                min_width=10, 
+                                container=False, 
+                                elem_classes=["word", "text-input"], 
+                                interactive=True, 
+                                max_length=len(word)
+                            )
+
                             inputs.append(input)
                             
                             if punctuation != "":
                                 all.append(punctuation)
-                                gr.Textbox(punctuation, max_lines=1, scale=0, min_width=10, container=False, elem_classes=["word", "word-punct"], interactive=False)
+                                gr.Textbox(
+                                    punctuation, 
+                                    max_lines=1, 
+                                    scale=0, 
+                                    min_width=10, 
+                                    container=False, 
+                                    elem_classes=["word", "word-punct"], 
+                                    interactive=False
+                                )
 
                         gr.HTML(f"", elem_classes=["script"], js_on_load=f'window.updateTextboxes({all})')
 
@@ -109,9 +128,6 @@ class Tab_Lesson_Chosen:
 
             msg = gr.Markdown(PASSED_MSG if is_passed else "", scale=0, elem_classes=["tip-msg"])
 
-            s_progress_idx = gr.State(progress_idx)
-            s_words = gr.State(words)
-
             with gr.Row(min_height=10, elem_classes=["button-bar"]):
                 with gr.Column(scale=0, min_width=50):
                     btn = gr.Button("↺")
@@ -121,13 +137,27 @@ class Tab_Lesson_Chosen:
                     btn.click(self.on_click_prev, inputs=[s_cur_meta, s_progress_idx], outputs=[s_cur_meta])
                 with gr.Column(scale=0, min_width=120):
                     submit_btn = gr.Button("⏏ submit", elem_classes=["submit-button"])
-                    submit_btn.click(self.on_click_submit, inputs=[s_cur_meta, s_progress_idx, s_words] + inputs, outputs=[s_cur_meta, msg])
                 with gr.Column(scale=0, min_width=100):
                     btn = gr.Button("▶", interactive=progress_idx < len(sheet)-1)
                     btn.click(self.on_click_next, inputs=[s_cur_meta, s_progress_idx], outputs=[s_cur_meta])
                 with gr.Column(scale=0, min_width=50):
                     btn = gr.Button("★", elem_classes="favourite-on" if is_favourite else "favourite-off")
                     btn.click(self.on_click_favourite, inputs=[s_cur_meta, s_progress_idx], outputs=[s_cur_meta])
+
+            # submit events
+            s_words = gr.State(words)
+            for input in inputs:
+                input.submit(
+                    self.on_click_submit, 
+                    inputs=[s_cur_meta, s_progress_idx, s_words] + inputs, 
+                    outputs=[s_cur_meta, msg]
+                )
+                
+            submit_btn.click(
+                self.on_click_submit, 
+                inputs=[s_cur_meta, s_progress_idx, s_words] + inputs, 
+                outputs=[s_cur_meta, msg]
+            )
 
     def on_exit_lesson(self, lessons: dict, meta: dict) -> tuple:
         # refresh lessons list with the updated meta
