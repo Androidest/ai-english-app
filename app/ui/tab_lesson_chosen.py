@@ -25,6 +25,8 @@ class Tab_Lesson_Chosen:
         @gr.render(inputs=[s_cur_meta, s_cur_sheet])
         def render_lesson_content(meta: dict, sheet: gr.DataFrame):
             progress_idx = meta["progress_idx"]
+            correct_percent = meta['correct_count'] / meta["total"] * 100
+            page_percent = (meta['progress_idx'] + 1) / meta["total"] * 100
             is_passed = state_lessons.is_phrase_passed(meta, progress_idx)
             is_favourite = state_lessons.is_phrase_favourite(meta, progress_idx)
 
@@ -32,6 +34,12 @@ class Tab_Lesson_Chosen:
                 progress_idx = 0
             elif progress_idx >= len(sheet):
                 progress_idx = len(sheet)-1
+
+            with gr.Row(elem_classes=["progress-bar-track"]):
+                gr.HTML(f'''
+                <div class="progress-bar-fill" style="width: {correct_percent}% !important;"></div>
+                <div class="progress-bar-fill-2" style="width: {page_percent}% !important;"></div>
+                ''')
 
             with gr.Row(elem_classes=["lesson-title-bar"]):
                 exit_btn = gr.Button("↩", variant="secondary", size="sm", elem_classes=["exit-button"], scale=0)
