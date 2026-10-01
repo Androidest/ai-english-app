@@ -71,6 +71,15 @@ class Sheet:
             dirname.mkdir(parents=True)
         self.dataframe.to_excel(self.excel_file_path, sheet_name=self.sheet_name, index=index)
 
+    def set_index(self, keys:any, drop:bool=False):
+        self.dataframe.set_index(keys, drop=drop, inplace=True)
+
+    def delete_by_index(self, keys:Union[any,list]):
+        self.dataframe.drop(keys, inplace=True)
+
+    def reset_index(self):
+        self.dataframe.reset_index(drop=True, inplace=True)
+
 if __name__ == "__main__":
     from app.utils.paths import PATH_LESSONS
 

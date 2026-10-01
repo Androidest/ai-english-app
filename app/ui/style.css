@@ -194,7 +194,11 @@
 }
 
 .card-item-bg {
-    background-color:#f1f1f1;;
+    background-color:#f1f1f1;
+}
+
+.fav-item-bg {
+    background-color:#fff2d2;
 }
 
 .card-name-wrapper {
@@ -270,6 +274,12 @@
     position: relative;
     top: -2px;
     margin-right: 5px;
+}
+
+.fav-title p::before {
+    content: "🌟";
+    font-size: 40px !important;
+    top: 2px;
 }
 
 .lesson-title p {
@@ -533,4 +543,18 @@
     z-index: 999;
     color: #ae94e1;
     font-size: large;
+}
+
+.empty-lesson-wrapper {
+    width: 100%;
+    height: 400px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.empty-lesson p {
+    text-align: center;
+    font-size: 30px !important;
+    color: #b3b3b3 !important;
 }

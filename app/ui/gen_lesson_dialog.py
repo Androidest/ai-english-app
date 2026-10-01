@@ -1,5 +1,5 @@
 import gradio as gr
-from app.ui.state_lessons import State_Lessons
+from app.ui.state_lessons import State_Lessons, FAV_LESSON
 from app.ui.state_llms import State_LLMs
 from app.utils.paths import PATH_LESSONS
 
@@ -118,6 +118,9 @@ class GenLessonDialog:
         error = ""
         if name == "":
             error = ERROR_TEMPLATE.format(msg="Name is required!")
+
+        elif name.lower() == FAV_LESSON.lower():
+            error = ERROR_TEMPLATE.format(msg="The name 'Favourite' has already been used for special purpose.")
 
         elif (PATH_LESSONS / f"{name}.xlsx").exists():
             error = ERROR_TEMPLATE.format(msg=f"Lesson with the name '{name}' already exists.")

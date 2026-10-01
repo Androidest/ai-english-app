@@ -1,6 +1,6 @@
 import gradio as gr
 from app.ui.state_llms import State_LLMs
-from app.ui.state_lessons import State_Lessons, SORT_ALPHA_A_Z, SORT_ALPHA_Z_A, SORT_LATEST, SORT_OLDEST
+from app.ui.state_lessons import State_Lessons, SORT_ALPHA_A_Z, SORT_ALPHA_Z_A, SORT_LATEST, SORT_OLDEST, FAV_LESSON
 from app.ui.gen_lesson_dialog import GenLessonDialog
 
 class Tab_Lesson_List:
@@ -40,8 +40,22 @@ class Tab_Lesson_List:
         @gr.render(inputs=[state_lessons.metas, state_lessons.sort_by, s_search])
         def render_tab(lessons: dict, sort_by: str, search: str):
             with gr.Row():
+
+                # search lessons
                 filtered_lessons = state_lessons.filter_lessons(lessons, search)
+
+                # cache the Favourite lesson
+                fav_meta = None
+                if FAV_LESSON in filtered_lessons:
+                    fav_meta = filtered_lessons[FAV_LESSON]
+                    filtered_lessons = { k:v for k,v in filtered_lessons.items() if k != FAV_LESSON }
+
+                # sort lessons
                 sorted_lessons = state_lessons.sort_lessons(filtered_lessons, sort_by)
+
+                # put the Favourite at the start of the list
+                if fav_meta != None:
+                    sorted_lessons.insert(0, (FAV_LESSON, fav_meta))
 
                 for lesson_name, meta in sorted_lessons:
                     s_meta = gr.State(meta)
@@ -49,7 +63,10 @@ class Tab_Lesson_List:
                     with gr.Column(variant="panel", elem_classes=["clickable-item", "card-item", "card-item-bg"], scale=0):
                         # invisible button to trigger click event for the entire item card
                         with gr.Row(scale=0, elem_classes=["card-name-wrapper"]):
-                            gr.Markdown(f"{lesson_name}", elem_classes=["card-name"], scale=0, line_breaks=True)
+                            if lesson_name != FAV_LESSON:
+                                gr.Markdown(lesson_name, elem_classes=["card-name"], scale=0, line_breaks=True)
+                            else:
+                                gr.Markdown(f"<span style='font-size:30px;'>🌟</span><br>{lesson_name}", elem_classes=["card-name"], scale=0, line_breaks=True)
                             item_btn1 = gr.Button("", elem_classes=["card-click-button"])
                             item_btn1.click(
                                 self.on_choose_lesson,
@@ -57,7 +74,8 @@ class Tab_Lesson_List:
                                 outputs=[state_lessons.cur_lesson],
                             )
                         gr.Markdown(f"⫶☰ {meta['correct_count']}/{meta['total']}", elem_classes=["card-meta-passed"], scale=0)
-                        gr.Markdown(f"★ {meta['favourite_count']}", elem_classes=["card-meta-favourite"], scale=0)
+                        if lesson_name != FAV_LESSON:
+                            gr.Markdown(f"★ {meta['favourite_count']}", elem_classes=["card-meta-favourite"], scale=0)
 
                         item_btn = gr.Button("", elem_classes=["card-click-button"])
                         item_btn.click(
