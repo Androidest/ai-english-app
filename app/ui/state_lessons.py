@@ -201,7 +201,7 @@ class State_Lessons:
             for k, v in fav_meta["phrases_flag"].items():
                 if int(k) < fav_idx:
                     flags[k] = v
-                else:
+                elif int(k) > fav_idx:
                     flags[str(int(k)-1)] = v
 
             fav_meta["phrases_flag"] = flags
@@ -289,6 +289,7 @@ class State_Lessons:
     def make_brief_meta(self, meta: dict, total: int = None) -> dict:
         if total is not None:
             meta["total"] = total
+            self.update_progress(meta, meta["progress_idx"])
 
         correct_count = 0
         favourite_count = 0

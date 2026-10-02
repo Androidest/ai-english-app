@@ -300,10 +300,6 @@ class Tab_Lesson_Chosen:
         if pending_origin != None:
             pendind_update_meta = (*pendind_update_meta, pending_origin)
 
-        if progress_idx >= len(fav_sheet):
-            progress_idx = len(fav_sheet)-1
-            self.state_lessons.update_progress(fav_meta, progress_idx)
-
         return fav_meta, pendind_update_meta, fav_sheet, progress_idx
 
     def on_click_restart(self, meta: dict):
