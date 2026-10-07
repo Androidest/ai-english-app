@@ -7,13 +7,14 @@ import re
 import uuid
 from typing import Literal, TypedDict
 
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_deepseek import ChatDeepSeek
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, ConfigDict, Field
 from app.prompts.prompts import * 
 from typing import Annotated, Literal, TypedDict
 import operator
+from enum import Enum
 
 # ============================================================================
 # Configuration
@@ -30,9 +31,15 @@ EMBEDDING_MODEL_NAME = os.getenv(
 
 DEFAULT_BATCH_SIZE = int(os.getenv("BATCH_SIZE", "20"))
 
-MAX_ENGLISH_RETRIES = int(os.getenv("MAX_ENGLISH_RETRIES", "3"))
-MAX_TRANSLATION_RETRIES = int(os.getenv("MAX_TRANSLATION_RETRIES", "3"))
-MAX_SEMANTIC_QA_RETRIES = int(os.getenv("MAX_SEMANTIC_QA_RETRIES", "2"))
+MAX_ENGLISH_RETRIES = int(os.getenv("MAX_ENGLISH_RETRIES", "5"))
+MAX_TRANSLATION_RETRIES = int(os.getenv("MAX_TRANSLATION_RETRIES", "5"))
+MAX_SEMANTIC_QA_RETRIES = int(os.getenv("MAX_SEMANTIC_QA_RETRIES", "3"))
+
+
+class ValidStatus(Enum):
+    SUCCESS = 'success'
+    FAIL = 'fail'
+    PENDING_BATCH = 'pending_batch'
 
 # Semantic duplicate threshold.
 #
@@ -43,10 +50,10 @@ SEMANTIC_DUPLICATE_THRESHOLD = float(
 )
 
 MIN_ENGLISH_LENGTH = 3
-MAX_ENGLISH_LENGTH = 220
+MAX_ENGLISH_LENGTH = 500
 
 MIN_TRANSLATION_LENGTH = 1
-MAX_TRANSLATION_LENGTH = 500
+MAX_TRANSLATION_LENGTH = 1000
 
 # Enable semantic deduplication against:
 #   1. sentences generated in the current request
@@ -271,16 +278,9 @@ class WorkflowState(TypedDict, total=False):
     target_count: int
     batch_size: int
 
-    # Application-created stable IDs.
-    #
-    # Important:
-    # "record_id" is INTERNAL.
-    # The final public "ID" field means Indonesian.
     target_ids: list[str]
 
     # Previously generated content from earlier application runs.
-    #
-    # This can come from a database, ChromaDB, pgvector, etc.
     existing_english_sentences: list[str]
 
     # Diversity planning
@@ -297,6 +297,9 @@ class WorkflowState(TypedDict, total=False):
     indonesian_items: list[TranslationItem]
 
     # Validation state
+    valid_status: ValidStatus
+    cn_valid_status: ValidStatus
+    id_valid_status: ValidStatus
     english_failed_ids:   Annotated[list[str], operator.add]
     chinese_failed_ids:   Annotated[list[str], operator.add]
     indonesian_failed_ids: Annotated[list[str], operator.add]
@@ -326,19 +329,16 @@ def create_record_id(index: int) -> str:
     """
     return f"sentence_{index:05d}_{uuid.uuid4().hex[:8]}"
 
-
 def normalize_text(text: str) -> str:
     text = text.strip().lower()
     text = re.sub(r"\s+", " ", text)
     return text
-
 
 def map_by_id(items: list[BaseModel]) -> dict[str, BaseModel]:
     return {
         item.record_id: item
         for item in items
     }
-
 
 def validate_ids(
     expected_ids: list[str],
@@ -363,7 +363,6 @@ def validate_ids(
         )
 
     return True, ""
-
 
 def validate_english_text(
     items: list[EnglishSentence],
@@ -395,7 +394,6 @@ def validate_english_text(
 
     return failures
 
-
 def validate_translation_text(
     items: list[TranslationItem],
 ) -> dict[str, str]:
@@ -414,7 +412,6 @@ def validate_translation_text(
             )
 
     return failures
-
 
 def remaining_english_ids(
     target_ids: list[str],
@@ -688,14 +685,9 @@ async def validate_english(
         if item.record_id in current_ids
     ]
 
-    expected_ids = state[
-        "current_english_batch_ids"
-    ]
+    expected_ids = state["current_english_batch_ids"]
 
-    actual_ids = [
-        item.record_id
-        for item in batch
-    ]
+    actual_ids = [ item.record_id for item in batch ]
 
     failures: dict[str, str] = {}
 
@@ -712,10 +704,18 @@ async def validate_english(
 
     failures.update(text_failures)
 
+    english_failed_ids = sorted(failures.keys())
+
+    # routing for the conditional edges
+    valid_status = ValidStatus.SUCCESS
+    if len(english_failed_ids) > 0:
+        valid_status = ValidStatus.FAIL
+    elif len(state["english_items"]) < state["target_count"]:
+        valid_status = ValidStatus.PENDING_BATCH
+
     return {
-        "english_failed_ids": sorted(
-            failures.keys()
-        ),
+        "english_failed_ids": english_failed_ids,
+        "valid_status": valid_status,
         "errors": [
                 f"English validation: {record_id}: {reason}"
                 for record_id, reason
@@ -723,7 +723,6 @@ async def validate_english(
             ]
         ,
     }
-
 
 # ============================================================================
 # Node 5: Repair Failed English Items
@@ -1016,10 +1015,11 @@ async def validate_chinese(
         )
     )
 
+    chinese_failed_ids = sorted(failures.keys())
+
     return {
-        "chinese_failed_ids": sorted(
-            failures.keys()
-        ),
+        "chinese_failed_ids": chinese_failed_ids,
+        "cn_valid_status": ValidStatus.SUCCESS if len(chinese_failed_ids) == 0 else ValidStatus.FAIL,
         "errors": [
                 f"Chinese validation: "
                 f"{record_id}: {reason}"
@@ -1056,10 +1056,11 @@ async def validate_indonesian(
         )
     )
 
+    indonesian_failed_ids = sorted(failures.keys())
+
     return {
-        "indonesian_failed_ids": sorted(
-            failures.keys()
-        ),
+        "indonesian_failed_ids": indonesian_failed_ids,
+        "id_valid_status": ValidStatus.SUCCESS if len(indonesian_failed_ids) == 0 else ValidStatus.FAIL,
         "errors": [
                 f"Indonesian validation: "
                 f"{record_id}: {reason}"
@@ -1292,32 +1293,6 @@ Requirements:
         "indonesian_failed_ids": [],
         "indonesian_retry_count": retry_count + 1,
     }
-
-
-# ============================================================================
-# Translation Validation Barrier
-# ============================================================================
-
-async def translation_validation_barrier(
-    state: WorkflowState,
-) -> WorkflowState:
-    return {}
-
-
-def route_after_translation_validation(
-    state: WorkflowState,
-) -> Literal[
-    "repair_chinese",
-    "repair_indonesian",
-    "merge_by_id",
-]:
-    if state.get("chinese_failed_ids"):
-        return "repair_chinese"
-
-    if state.get("indonesian_failed_ids"):
-        return "repair_indonesian"
-
-    return "merge_by_id"
 
 
 # ============================================================================
@@ -1587,232 +1562,93 @@ def route_after_english_validation(
 
     return "translate"
 
-
-def route_after_english_repair(
-    state: WorkflowState,
-) -> Literal["validate_english"]:
-    return "validate_english"
-
-
-def route_after_translation_repair(
-    state: WorkflowState,
-) -> Literal["semantic_alignment_qa"]:
-    return "semantic_alignment_qa"
-
-
-# ============================================================================
-# Graph Construction
-# ============================================================================
+# region ============== Graph Construction =================================
 
 def build_graph():
     graph = StateGraph(WorkflowState)
 
-    # Request / planning
-    graph.add_node(
-        "initialize_request",
-        initialize_request,
-    )
-
-    graph.add_node(
-        "plan_diversity",
-        plan_diversity,
-    )
-
     # English generation
-    graph.add_node(
-        "generate_english",
-        generate_english,
-    )
-
-    graph.add_node(
-        "validate_english",
-        validate_english,
-    )
-
-    graph.add_node(
-        "repair_english",
-        repair_english,
-    )
-
-    graph.add_node(
-        "start_translation", 
-        lambda state: {},
-    )
+    graph.add_node("initialize_request", initialize_request)
+    graph.add_node("plan_diversity", plan_diversity)
+    graph.add_node("generate_english", generate_english)
+    graph.add_node("validate_english",validate_english)
+    graph.add_node("repair_english", repair_english)
 
     # Translation
-    graph.add_node(
-        "translate_chinese",
-        translate_chinese,
-    )
+    graph.add_node("start_translation", lambda state: {})
 
-    graph.add_node(
-        "translate_indonesian",
-        translate_indonesian,
-    )
+    graph.add_node("translate_chinese", translate_chinese)
+    graph.add_node("validate_chinese", validate_chinese)
+    graph.add_node("repair_chinese", repair_chinese)
 
-    # Translation validation
-    graph.add_node(
-        "validate_chinese",
-        validate_chinese,
-    )
+    graph.add_node("translate_indonesian", translate_indonesian)
+    graph.add_node("validate_indonesian", validate_indonesian)
+    graph.add_node("repair_indonesian", repair_indonesian)
 
-    graph.add_node(
-        "validate_indonesian",
-        validate_indonesian,
-    )
-
-    graph.add_node(
-        "translation_validation_barrier",
-        translation_validation_barrier,
-    )
-
-    # Translation repair
-    graph.add_node(
-        "repair_chinese",
-        repair_chinese,
-    )
-
-    graph.add_node(
-        "repair_indonesian",
-        repair_indonesian,
-    )
-
-    # Alignment / QA
-    graph.add_node(
-        "merge_by_id",
-        merge_by_id,
-    )
-
-    graph.add_node(
-        "semantic_alignment_qa",
-        semantic_alignment_qa,
-    )
-
-    graph.add_node(
-        "final_validation",
-        final_validation,
-    )
-
+    # Merge / QA
+    graph.add_node("merge_by_id", merge_by_id)
+    graph.add_node("semantic_alignment_qa", semantic_alignment_qa)
+    graph.add_node("final_validation", final_validation)
 
     # ------------------------------------------------------------------------
     # Entry
     # ------------------------------------------------------------------------
-
-    graph.add_edge(
-        START,
-        "initialize_request",
-    )
-
-    graph.add_edge(
-        "initialize_request",
-        "plan_diversity",
-    )
-
-    graph.add_edge(
-        "plan_diversity",
-        "generate_english",
-    )
-
-    graph.add_edge(
-        "generate_english",
-        "validate_english",
-    )
+    graph.add_edge(START, "initialize_request")
+    graph.add_edge("initialize_request", "plan_diversity")
+    graph.add_edge("plan_diversity", "generate_english")
 
     # ------------------------------------------------------------------------
     # English generation loop
     # ------------------------------------------------------------------------
-
+    graph.add_edge("generate_english", "validate_english")
+    graph.add_edge("repair_english", "validate_english")
     graph.add_conditional_edges(
         "validate_english",
-        route_after_english_validation,
+        lambda s: s["valid_status"],
         {
-            "repair_english": "repair_english",
-            "generate_next_english_batch": "generate_english",
-            "translate": "start_translation",
+            ValidStatus.FAIL: "repair_english",
+            ValidStatus.PENDING_BATCH: "generate_english",
+            ValidStatus.SUCCESS: "start_translation",
         },
     )
 
-    # repair -> validate
-    graph.add_edge(
-        "repair_english",
-        "validate_english",
-    )
-
     # ------------------------------------------------------------------------
-    # Parallel translation
-    #
-    # One validated English source set fans out into two independent
-    # translation branches.
+    # Parallel translation:
+    #   One validated English source set fans out into different independent
+    #   translation branches.
     # ------------------------------------------------------------------------
 
+    # Chinese translation
     graph.add_edge("start_translation", "translate_chinese")
-    graph.add_edge("start_translation", "translate_indonesian")
-
-    graph.add_edge(
-        "translate_chinese",
-        "validate_chinese",
-    )
-
-    graph.add_edge(
-        "translate_indonesian",
-        "validate_indonesian",
-    )
-
-    # The second branch starts at the same English-complete node.
-    # graph.add_edge(
-    #     "validate_english",
-    #     "translate_indonesian",
-    # )
-
-    # Both validation branches converge.
-    graph.add_edge(
-        "validate_chinese",
-        "translation_validation_barrier",
-    )
-
-    graph.add_edge(
-        "validate_indonesian",
-        "translation_validation_barrier",
-    )
-
-    # ------------------------------------------------------------------------
-    # Translation repair loop
-    # ------------------------------------------------------------------------
-
+    graph.add_edge("translate_chinese", "validate_chinese")
+    graph.add_edge("repair_chinese", "validate_chinese")
     graph.add_conditional_edges(
-        "translation_validation_barrier",
-        route_after_translation_validation,
+        "validate_chinese",
+        lambda s: s["cn_valid_status"],
         {
-            "repair_chinese": "repair_chinese",
-            "repair_indonesian": "repair_indonesian",
-            "merge_by_id": "merge_by_id",
+            ValidStatus.FAIL: "repair_chinese",
+            ValidStatus.SUCCESS: "merge_by_id",
         },
     )
 
+    # Indonesian translation
+    graph.add_edge("start_translation", "translate_indonesian")
+    graph.add_edge("translate_indonesian", "validate_indonesian")
+    graph.add_edge("repair_indonesian", "validate_indonesian")
+    graph.add_conditional_edges(
+            "validate_indonesian",
+            lambda s: s["id_valid_status"],
+            {
+                ValidStatus.FAIL: "repair_indonesian",
+                ValidStatus.SUCCESS: "merge_by_id",
+            },
+        )
+
+    # ------------------------------------------------------------------------
+    # Meges the two branches back to a single branch: ID alignment
+    # ------------------------------------------------------------------------
     # Any repaired translation is semantically re-evaluated.
-    graph.add_edge(
-        "repair_chinese",
-        "semantic_alignment_qa",
-    )
-
-    graph.add_edge(
-        "repair_indonesian",
-        "semantic_alignment_qa",
-    )
-
-    # ------------------------------------------------------------------------
-    # Deterministic ID alignment
-    # ------------------------------------------------------------------------
-
-    graph.add_edge(
-        "merge_by_id",
-        "semantic_alignment_qa",
-    )
-
-    # ------------------------------------------------------------------------
-    # Semantic QA / targeted repair
-    # ------------------------------------------------------------------------
-
+    graph.add_edge("merge_by_id", "semantic_alignment_qa")
     graph.add_conditional_edges(
         "semantic_alignment_qa",
         route_after_semantic_qa,
@@ -1823,24 +1659,15 @@ def build_graph():
         },
     )
 
-    # ------------------------------------------------------------------------
-    # END
-    # ------------------------------------------------------------------------
-
-    graph.add_edge(
-        "final_validation",
-        END,
-    )
+    graph.add_edge("final_validation", END)
 
     return graph.compile()
 
-
 app = build_graph()
 
+# endregion ============== Graph Construction =================================
 
-# ============================================================================
-# Public API
-# ============================================================================
+# region ============== Workflow Public API =================================
 
 async def generate_multilingual_sentences(
     topic: str,
@@ -1911,19 +1738,13 @@ async def generate_multilingual_sentences(
         ),
     }
 
-    final_state = await app.ainvoke(
-        initial_state,
+    final_state = await app.ainvoke(initial_state,
         config={
             "recursion_limit": 200,
         },
     )
 
     return final_state["final_items"]
-
-
-# ============================================================================
-# Sync Wrapper
-# ============================================================================
 
 def generate_multilingual_sentences_sync(
     topic: str,
@@ -1942,16 +1763,14 @@ def generate_multilingual_sentences_sync(
         )
     )
 
+# endregion ============== Workflow Public API =================================
 
-# ============================================================================
-# Example
-# ============================================================================
-
+# ========================== Example ======================================
 if __name__ == "__main__":
     result = generate_multilingual_sentences_sync(
         topic="Travel and everyday situations",
         count=10,
-        difficulty="A2",
+        difficulty="A1",
         batch_size=5,
         existing_english_sentences=[],
     )
