@@ -1,13 +1,14 @@
-# python=3.10
-langchain-community==0.3.27
-langchain-openai
-langgraph-supervisor
-langgraph==0.5.3
-langgraph-checkpoint==2.1.1
-langgraph-prebuilt==0.5.2
-langgraph-sdk==0.1.73
-gradio==5.42.0
-pywebview
-pandas
-openpyxl
-pydantic
+# python=3.12
+langchain==1.4.7
+langchain-community==0.4.2
+langchain-openai==1.7.3
+langchain-deepseek=1.1.1
+langgraph==1.2.19
+langgraph-checkpoint==4.3.1
+langgraph-prebuilt==1.1.1
+langgraph-sdk==0.4.11
+gradio==6.31.0
+pywebview==6.2.1
+pandas==3.1.0
+openpyxl==3.1.5
+pydantic==2.14.2

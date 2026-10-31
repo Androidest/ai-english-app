@@ -1,7 +1,7 @@
 import gradio as gr
-from app.utils.llm_config import LLMConfig
+from app.workflow._commons_.llm_config import LLMConfig, ProviderType
 from app.ui.confirm_dialog import ConfirmDialog
-from app.ui.state_llms import State_LLMs
+from app.ui.state_llms import State_LLMs, PATH_LLMS
 import time
        
 class Tab_AI:
@@ -18,6 +18,7 @@ class Tab_AI:
                 for idx, item in enumerate(items):
     
                     # data
+                    provider = item.get("model_provider", ProviderType.__args__[0])
                     alias = item.get("alias", "")
                     model = item.get("model", "")
                     base_url = item.get("base_url", "")
@@ -58,16 +59,18 @@ class Tab_AI:
                                 # editing mode
                                 if is_editing:
                                     alias_in = gr.Textbox(value=alias, label="Alias", elem_classes="input-editing", interactive=True)
+                                    provider_in = gr.Dropdown(choices=ProviderType.__args__, value=provider, label="Provider", elem_classes=["input-editing"], interactive=True)
                                     model_in = gr.Textbox(value=model, label="Model", elem_classes="input-editing", interactive=True)
                                     base_url_in = gr.Textbox(value=base_url, label="Base URL", elem_classes="input-editing", interactive=True)
                                     api_key_in = gr.Textbox(value=api_key, label="API Key", elem_classes="input-editing", interactive=True)
                                 
                                 # non-edit mode
                                 else: 
-                                    gr.Text(value=item.get("alias", ""), label="Alias")
-                                    gr.Text(value=item.get("model", ""), label="Model")
-                                    gr.Text(value=item.get("base_url", ""), label="Base URL")
-                                    gr.Text(value=item.get("api_key", ""), label="API Key")
+                                    gr.Text(value=alias, label="Alias")
+                                    gr.Dropdown(choices=ProviderType.__args__, value=provider, interactive=False)
+                                    gr.Text(value=model, label="Model")
+                                    gr.Text(value=base_url, label="Base URL")
+                                    gr.Text(value=api_key, label="API Key")
     
                             if error:
                                 gr.Markdown(f'<span style="color:red;">Error: {error}</span>')
@@ -79,7 +82,7 @@ class Tab_AI:
                                     confirm_btn = gr.Button("✅", elem_classes="confirm-editing")
                                     confirm_btn.click(
                                         self.on_confirm_edit, 
-                                        inputs=[gr.State(idx), alias_in, model_in, base_url_in, api_key_in, state_llms.configs],
+                                        inputs=[gr.State(idx), provider_in, alias_in, model_in, base_url_in, api_key_in, state_llms.configs],
                                         outputs=[state_llms.configs]
                                     )
     
@@ -125,9 +128,10 @@ class Tab_AI:
         new_items[i]["editing"] = True
         return new_items
 
-    def on_confirm_edit(self, i, alias_text, model_text, base_url_text, api_key_text, old_items):
+    def on_confirm_edit(self, i, provider_dd, alias_text, model_text, base_url_text, api_key_text, old_items):
         # 复制旧列表，避免原地修改state
         new_items = [i.copy() for i in old_items]
+        new_items[i]["model_provider"] = provider_dd
         new_items[i]["alias"] = alias_text
         new_items[i]["model"] = model_text
         new_items[i]["base_url"] = base_url_text
@@ -161,8 +165,12 @@ class Tab_AI:
 
     def on_cancel_edit(self, i, old_items):
         new_items = old_items.copy()
-        new_items[i]["editing"] = False
-        new_items[i]["error"] = ""
+        if 'id' not in new_items[i]:
+            # canceling a new added config without saving
+            new_items.pop(i)
+        else:
+            new_items[i]["editing"] = False
+            new_items[i]["error"] = ""
         return new_items
 
     def on_delete(self, i, old_items):
@@ -172,7 +180,7 @@ class Tab_AI:
         return new_items
 
     def on_add(self, old_items):
-        item: dict = LLMConfig(alias="", model="", base_url="", api_key="").model_dump()
+        item: dict = LLMConfig(model_provider=ProviderType.__args__[0], alias="", model="", base_url="", api_key="").model_dump()
         item["editing"] = True
         new_items = old_items.copy()
         new_items.append(item)

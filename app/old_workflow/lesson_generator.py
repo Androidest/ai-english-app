@@ -11,7 +11,7 @@ from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_deepseek import ChatDeepSeek
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, ConfigDict, Field
-from app.prompts.prompts import * 
+from app.old_workflow.prompts import * 
 from typing import Annotated, Literal, TypedDict
 import operator
 from enum import Enum
@@ -178,7 +178,7 @@ english_generator = generation_llm.with_structured_output(EnglishBatch)
 english_repair = generation_llm.with_structured_output(EnglishBatch)
 
 translator = translation_llm.with_structured_output(TranslationBatch)
-translation_repair = translation_llm.with_structured_output(TranslationBatch)
+translation_repair = translation_llm.with_structured_output(TranslationBatch).with_retry
 
 alignment_qa = qa_llm.with_structured_output(TranslationQABatch)
 final_qa = qa_llm.with_structured_output(FinalQA)

@@ -9,6 +9,11 @@ class BaseConfig(BaseSettings):
     SHARE: bool = Field(default=False, env="SHARE")
     CORS_ORIGINS: Union[List[str], str] = Field(default=["*"], env="CORS_ORIGINS")
     
+    TEST_MODEL_PROVIDER: str
+    TEST_MODEL: str
+    TEST_BASE_URL: str
+    TEST_API_KEY: str
+    
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, v):
@@ -32,11 +37,17 @@ class ProdConfig(BaseConfig):
         env_file = ".env.prod"
         case_sensitive = True
 
+class TestConfig(BaseConfig):
+    class Config:
+        env_file = ".env.test"
+        case_sensitive = True
+
 
 config: BaseConfig = None
 config_dict = {
     "dev": DevConfig,
     "prod": ProdConfig,
+    "test": TestConfig,
 }
 
 def set_config(environment: str):
