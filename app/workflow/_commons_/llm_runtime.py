@@ -32,6 +32,10 @@ class LLMRuntime:
         model_kargs.update(overrides)
         del model_kargs['alias']
 
+        if model_kargs['model_provider'] == 'deepseek':
+            # deepseek does not support tools calling when using 'thinking'(by default)
+            model_kargs['extra_body'] = {"thinking": {"type": "disabled"}}
+
         # generate a unique key for caching the model 
         key = tuple(
             sorted(

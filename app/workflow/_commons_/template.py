@@ -66,7 +66,6 @@ def extract(
     # get the model from the runtime cache
     llm = runtime.context.llm_runtime.get_model(
         temperature=1, # Sometimes need different temperatures for different situations.
-        extra_body={"thinking": {"type": "disabled"}}, # TODO
     )
 
     # Use ConstrainedOutputWithRetry when situations require structured or semi-structured outputs.

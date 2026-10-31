@@ -205,7 +205,7 @@ class ConstrainedOutputWithRetry(Runnable):
                         )
                     )
                 else:
-                    raise Exception("llm output is of type function and is not JSON serializable")
+                    raise e
 
         # reached max retries
         error = f"=======================================================================\n"
