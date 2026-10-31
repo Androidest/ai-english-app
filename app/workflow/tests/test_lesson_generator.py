@@ -40,9 +40,10 @@ def test_lesson_generator():
         assert item["EN"].strip()
         assert item["CN"].strip()
         assert item["ID"].strip()
-
-    print('Items:', items)
-
+        print("---------------------------------")
+        print("EN: ", item["EN"])
+        print("CN: ", item["CN"])
+        print("ID: ", item["ID"])
 
 if __name__ == "__main__":
     test_lesson_generator()
