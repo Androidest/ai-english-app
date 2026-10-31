@@ -10,6 +10,13 @@
             "request": "launch",
             "module": "app.workflow._commons_.template",
             "justMyCode": false,
+        },
+        {
+            "name": "Python Debugger: app.workflow.tests.test_lesson_generator",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "app.workflow.tests.test_lesson_generator",
+            "justMyCode": false,
         }
     ]
 }
