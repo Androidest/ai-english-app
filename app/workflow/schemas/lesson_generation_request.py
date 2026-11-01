@@ -5,7 +5,7 @@ from app.workflow.nodes._common import DEFAULT_BATCH_SIZE
 
 class LessonGenerationRequest(BaseModel):
     """Public input of the multilingual lesson generation workflow."""
-
+    
     topic: str
     count: int
     difficulty: str = "B1"

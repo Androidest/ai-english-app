@@ -158,6 +158,7 @@ class LessonGenerator:
         self,
         input: LessonGenerationRequest,
     ) -> LessonGeneratorState:
+        
         return LessonGeneratorState(
             topic=input.topic,
             difficulty=input.difficulty,
@@ -171,6 +172,7 @@ class LessonGenerator:
         llm_config: LLMConfig,
         user_id: str,
     ) -> BasicWorkflowContext:
+        
         return BasicWorkflowContext(
             user_id=user_id,
             llm_runtime=LLMRuntime(config=llm_config),
