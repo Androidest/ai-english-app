@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from app.workflow._commons_.llm_runtime import LLMRuntime
+from app.workflow._core_.llm_runtime import LLMRuntime
 
 @dataclass(frozen=True)
 class BasicWorkflowContext:

@@ -4,7 +4,7 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import Runnable
 import threading
 
-from app.workflow._commons_.llm_config import LLMConfig
+from app.workflow._core_.llm_config import LLMConfig
 
 class LLMRuntime:
     """This is used to be passed to a workflow graph through a context."""

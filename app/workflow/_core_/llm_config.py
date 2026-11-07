@@ -1,19 +1,9 @@
 from pydantic import BaseModel
-from app.utils.paths import PATH_LLMS
 import json
-from typing import Literal
 from pydantic import BaseModel
 
-ProviderType = Literal[
-        "openai", 
-        "deepseek", 
-        "anthropic",
-        "huggingface",
-        "ollama",
-        "azure_openai",
-        "mistralai",
-        "nvidia",
-    ]
+from app.utils.paths import PATH_LLMS
+from app.utils.types import ProviderType
 
 class LLMConfig(BaseModel):
     alias: str

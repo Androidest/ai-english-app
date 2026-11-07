@@ -5,10 +5,10 @@ from pydantic import BaseModel, Field
 from typing import Literal, TypedDict
 from langgraph.runtime import Runtime
 
-from app.workflow._commons_.runnable import ConstrainedOutputWithRetry 
-from app.workflow._commons_.llm_config import LLMConfig 
-from app.workflow._commons_.llm_runtime import LLMRuntime 
-from app.workflow._commons_.context import BasicWorkflowContext 
+from app.workflow._core_.runnable import ConstrainedOutputWithRetry 
+from app.workflow._core_.llm_config import LLMConfig 
+from app.workflow._core_.llm_runtime import LLMRuntime 
+from app.workflow._core_.context import BasicWorkflowContext 
 
 # ====================================================================
 #region definition of a schema

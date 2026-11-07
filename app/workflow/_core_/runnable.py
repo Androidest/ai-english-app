@@ -1,10 +1,11 @@
 from __future__ import annotations
-
+import json
 from typing import Any, Callable, Type, Literal
 
 from pydantic import BaseModel
 from langchain_core.language_models import LanguageModelLike
 from langchain_core.messages import (
+    AIMessage,
     BaseMessage,
     HumanMessage,
     SystemMessage,
@@ -51,7 +52,6 @@ class ConstrainedOutputWithRetry(Runnable):
         verify_cb: Callable[[BaseModel], None] | None = None,
         keep_all_errors: bool = False,
         max_retries: int = 3,
-        method:Literal["json_schema", "json_mode", "function_calling"] ="json_schema",
     ):
         self.llm = llm
         self.out_schema = out_schema
@@ -63,7 +63,7 @@ class ConstrainedOutputWithRetry(Runnable):
             # structures output
             self.llm_structured = llm.with_structured_output(
                 schema=out_schema,
-                method=method,
+                method="json_schema",
                 include_raw=True,
             )
         else:
@@ -71,79 +71,90 @@ class ConstrainedOutputWithRetry(Runnable):
             self.llm_structured = None
 
     async def ainvoke(
-        self,
-        input: Any,
-        config=None,
-        **kwargs,
-    ):
-        messages = self._to_messages(input)
-        output = None
-
-        for attempt in range(self.max_retries + 1):
-
-            try:
-                if self.llm_structured:
-                    output = await self.llm_structured.ainvoke(
-                        messages,
-                        config=config,
-                        **kwargs,
-                    )
-
-                    # Schema / JSON parsing error
-                    if output["parsing_error"] is not None:
-                        raise output["parsing_error"]
-
-                    out = output["parsed"]
-                else:
-                    output = await self.llm.ainvoke(
-                        messages,
-                        config=config,
-                        **kwargs,
-                    )
-                    out = output.content
-
-                # Business validation
-                if self.verify_cb is not None:
-                    self.verify_cb(out) # if validation fails, the callback will raise an error
-
-                return out
-
-            except Exception as e:
-
-                if not self.keep_all_errors and messages[-1].content.startswith(FIX_ERROR_TITLE):
-                    messages.pop()
-                    messages.pop()
-                    # remove the last error from the history
-
-                # save the last output into the history
-                if output is not None:
+            self,
+            input: Any,
+            config=None,
+            **kwargs,
+        ):
+            messages = self._to_messages(input)
+            output = None
+            last_error = ""
+    
+            for attempt in range(self.max_retries + 1):
+    
+                try:
                     if self.llm_structured:
-                        messages.append(output["raw"])
-                    else:
-                        messages.append(output)
-
-                    # Report the validation error
-                    messages.append(
-                        HumanMessage(
-                            content=FIX_ERROR_TEMPLATE.format(error=str(e))
+                        output = await self.llm_structured.ainvoke(
+                            messages,
+                            config=config,
+                            **kwargs,
                         )
-                    )
-                else:
-                    raise Exception("llm output is of type function and is not JSON serializable")
-
-        # reached max retries
-        error = f"=======================================================================\n"
-        error += f"[ConstrainedOutputWithRetry] Has reached max retries: {self.max_retries}\n"
-
-        for m in messages:
-            error += '\n\n'
-            error += "---------------------------------------------------------------------\n"
-            error += f'{m.type}:\n'
-            if m.type == 'ai':
-                error += str(m)
-            else:
+    
+                        # Schema / JSON parsing error
+                        if output["parsing_error"] is not None:
+                            raise output["parsing_error"]
+    
+                        out = output["parsed"]
+                    else:
+                        output = await self.llm.ainvoke(
+                            messages,
+                            config=config,
+                            **kwargs,
+                        )
+                        out = output.content
+    
+                    # Business validation
+                    if self.verify_cb is not None:
+                        self.verify_cb(out) # if validation fails, the callback will raise an error
+    
+                    return out
+    
+                except Exception as e:
+    
+                    if not self.keep_all_errors and messages[-1].content.startswith(FIX_ERROR_TITLE):
+                        messages.pop()
+                        messages.pop()
+                        # remove the last error from the history
+    
+                    # save the last output into the history
+                    if output is not None:
+                        if self.llm_structured:
+                            messages.append(AIMessage(
+                                content="\n".join([json.dumps(obj, indent=2) for obj in output['raw'].content_blocks])
+                            ))
+                            # messages.append(AIMessage(
+                            #     content=out.model_dump_json(indent=2),
+                            # ))
+                        else:
+                            messages.append(output)
+                        output = None
+    
+                        # Report the validation error
+                        messages.append(
+                            HumanMessage(
+                                content=FIX_ERROR_TEMPLATE.format(error=str(e))
+                            )
+                        )
+                    else:
+                        last_error = str(e)
+                        break
+    
+            # reached max retries
+            error = f"\n===========================[ConstrainedOutputWithRetry]===============================\n"
+    
+            for m in messages:
+                error += '\n'
+                error += "---------------------------------------------------------------------\n"
+                error += f'{m.type}:\n'
                 error += str(m.content)
-        raise Exception(error)
+    
+            error += "---------------------------------------------------------------------\n"
+            if last_error:
+                error += f"last_error: {last_error}"
+            else:
+                error += f"[ConstrainedOutputWithRetry] Has reached max retries: {self.max_retries}"
+    
+            raise Exception(error)
 
 
     def invoke(
@@ -154,6 +165,7 @@ class ConstrainedOutputWithRetry(Runnable):
     ):
         messages = self._to_messages(input)
         output = None
+        last_error = ""
 
         for attempt in range(self.max_retries + 1):
 
@@ -194,9 +206,15 @@ class ConstrainedOutputWithRetry(Runnable):
                 # save the last output into the history
                 if output is not None:
                     if self.llm_structured:
-                        messages.append(output["raw"])
+                        messages.append(AIMessage(
+                            content="\n".join([json.dumps(obj, indent=2) for obj in output['raw'].content_blocks])
+                        ))
+                        # messages.append(AIMessage(
+                        #     content=out.model_dump_json(indent=2),
+                        # ))
                     else:
                         messages.append(output)
+                    output = None
 
                     # Report the validation error
                     messages.append(
@@ -205,20 +223,24 @@ class ConstrainedOutputWithRetry(Runnable):
                         )
                     )
                 else:
-                    raise e
+                    last_error = str(e)
+                    break
 
         # reached max retries
-        error = f"=======================================================================\n"
-        error += f"[ConstrainedOutputWithRetry] Has reached max retries: {self.max_retries}\n"
+        error = f"\n===========================[ConstrainedOutputWithRetry]===============================\n"
 
         for m in messages:
-            error += '\n\n'
+            error += '\n'
             error += "---------------------------------------------------------------------\n"
             error += f'{m.type}:\n'
-            if m.type == 'ai':
-                error += str(m)
-            else:
-                error += str(m.content)
+            error += str(m.content)
+
+        error += "---------------------------------------------------------------------\n"
+        if last_error:
+            error += f"last_error: {last_error}"
+        else:
+            error += f"[ConstrainedOutputWithRetry] Has reached max retries: {self.max_retries}"
+
         raise Exception(error)
 
     @staticmethod

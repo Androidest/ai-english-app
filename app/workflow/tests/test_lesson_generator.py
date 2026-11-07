@@ -2,14 +2,16 @@
 from app.utils.config import set_config
 set_config('test')
 from app.utils.config import config
+from app.utils.paths import PATH_IMAGES
 
-from app.workflow._commons_.llm_config import LLMConfig
+from app.workflow._core_.llm_config import LLMConfig
 from app.workflow.graphs.lesson_generator import LessonGenerator
 from app.workflow.schemas.lesson_generation_request import LessonGenerationRequest
 
 
-def build_llm_config() -> LLMConfig:
-    return LLMConfig(
+def test_lesson_generator():
+
+    llm_config = LLMConfig(
         alias="test",
         model_provider=config.TEST_MODEL_PROVIDER,
         model=config.TEST_MODEL,
@@ -17,33 +19,40 @@ def build_llm_config() -> LLMConfig:
         api_key=config.TEST_API_KEY,
     )
 
-
-def test_lesson_generator():
     request = LessonGenerationRequest(
+        source_language="English",
+        source_max_len=100,
         topic="Travel and everyday situations",
-        count=10,
+        target_count=5,
         difficulty="A1",
-        batch_size=5,
-        existing_english_sentences=[],
+
+        translation_languages=["Chinese", "Indonesian"],
+
+        batch_size=3,
+        max_concurrency=10,
     )
 
     workflow = LessonGenerator()
+    workflow.draw_graph_png(PATH_IMAGES/'lesson_generator_v2.png')
+
     items = workflow.invoke(
         input=request,
-        llm_config=build_llm_config(),
+        llm_config=llm_config,
         user_id="xxx",
     )
+    
+    # for batch in items:
+    #     print("---------------------------------")
+    #     for sen in batch.items:
+    #         print("- ", sen.val)
 
-    assert len(items) == request.count
+    assert len(items) == request.target_count
 
     for item in items:
-        assert item["EN"].strip()
-        assert item["CN"].strip()
-        assert item["ID"].strip()
         print("---------------------------------")
-        print("EN: ", item["EN"])
-        print("CN: ", item["CN"])
-        print("ID: ", item["ID"])
+        for k,v in item.items():
+            assert v.strip()
+            print(f"{k}: {v}")
 
 if __name__ == "__main__":
     test_lesson_generator()

@@ -1,65 +1,27 @@
-from typing import Literal
-
 from langgraph.graph import END, START, StateGraph
 
-from app.workflow._commons_.context import BasicWorkflowContext
-from app.workflow._commons_.llm_config import LLMConfig
-from app.workflow._commons_.llm_runtime import LLMRuntime
-from app.workflow.nodes.final_validation import final_validation
-from app.workflow.nodes.generate_english import generate_english
-from app.workflow.nodes.initialize_request import initialize_request
-from app.workflow.nodes.merge_by_id import merge_by_id
-from app.workflow.nodes.plan_diversity import plan_diversity
-from app.workflow.nodes.repair_chinese import repair_chinese
-from app.workflow.nodes.repair_english import repair_english
-from app.workflow.nodes.repair_indonesian import repair_indonesian
-from app.workflow.nodes.semantic_alignment_qa import semantic_alignment_qa
-from app.workflow.nodes.start_translation import start_translation
-from app.workflow.nodes.translate_chinese import translate_chinese
-from app.workflow.nodes.translate_indonesian import translate_indonesian
-from app.workflow.nodes.validate_chinese import validate_chinese
-from app.workflow.nodes.validate_english import validate_english
-from app.workflow.nodes.validate_indonesian import validate_indonesian
+from app.workflow._core_.context import BasicWorkflowContext
+from app.workflow._core_.llm_config import LLMConfig
+from app.workflow._core_.llm_runtime import LLMRuntime
+from app.workflow._core_.workflow_base import WorkflowBase
 from app.workflow.schemas.lesson_generation_request import LessonGenerationRequest
 from app.workflow.states.lesson_generator_state import LessonGeneratorState
-from app.workflow.states.valid_status import ValidStatus
+from app.workflow.nodes.initialize_request import initialize_request
+from app.workflow.nodes.plan_diversity import plan_diversity
+from app.workflow.nodes.batchify_plan_and_ids import batchify_plan_and_ids
+from app.workflow.nodes.gen_src_batch import gen_src_batch
+from app.workflow.nodes.fix_grammar_batch import fix_grammar_batch, fanout_fix_grammar_batch
+from app.workflow.nodes.apply_pending_batches import make_apply_pending_batches_node
+from app.workflow.nodes.empty_node import empty_node
+from app.workflow.nodes.translate_src_batch import translate_src_batch, fanout_translation
+from app.workflow.nodes.save_fixed_translation import save_fixed_translation
+from app.workflow.nodes.final_merge_by_uid import final_merge_by_uid
 
 RECURSION_LIMIT = 200
 
-
-def route_after_english_validation(state: LessonGeneratorState) -> ValidStatus:
-    return state["valid_status"]
-
-
-def route_after_chinese_validation(state: LessonGeneratorState) -> ValidStatus:
-    return state["cn_valid_status"]
-
-
-def route_after_indonesian_validation(state: LessonGeneratorState) -> ValidStatus:
-    return state["id_valid_status"]
-
-
-def route_after_semantic_qa(
-    state: LessonGeneratorState,
-) -> Literal[
-    "repair_chinese",
-    "repair_indonesian",
-    "final_validation",
-]:
-    if state.get("chinese_failed_ids"):
-        return "repair_chinese"
-
-    if state.get("indonesian_failed_ids"):
-        return "repair_indonesian"
-
-    return "final_validation"
-
-
-class LessonGenerator:
+class LessonGenerator(WorkflowBase):
     """A workflow that generates multilingual lesson sentences."""
 
-    def __init__(self):
-        self.graph = self._build_graph()
 
     def _build_graph(self):
         """Multilingual (EN/CN/ID) lesson generator workflow."""
@@ -69,114 +31,84 @@ class LessonGenerator:
             context_schema=BasicWorkflowContext,
         )
 
-        # English generation
+        # -------------------- nodes -----------------------
+
+        # Source generation
         builder.add_node("initialize_request", initialize_request)
         builder.add_node("plan_diversity", plan_diversity)
-        builder.add_node("generate_english", generate_english)
-        builder.add_node("validate_english", validate_english)
-        builder.add_node("repair_english", repair_english)
+        builder.add_node("batchify_plan_and_ids", batchify_plan_and_ids)
+        builder.add_node("gen_src_batch", gen_src_batch)
+        builder.add_node("fix_src_grammar_batch", fix_grammar_batch)
+        builder.add_node("apply_pending_to_src", make_apply_pending_batches_node("src_batches"))
 
         # Translation
-        builder.add_node("start_translation", start_translation)
+        builder.add_node("start_translation", empty_node)
+        builder.add_node("translate_src_batch", translate_src_batch)
+        builder.add_node("apply_pending_to_trans", make_apply_pending_batches_node("translated_batches"))
+        builder.add_node("fix_trans_grammar_batch", fix_grammar_batch)
+        builder.add_node("save_fixed_translation", save_fixed_translation)
 
-        builder.add_node("translate_chinese", translate_chinese)
-        builder.add_node("validate_chinese", validate_chinese)
-        builder.add_node("repair_chinese", repair_chinese)
+        # final merge
+        builder.add_node("final_merge_by_uid", final_merge_by_uid)
 
-        builder.add_node("translate_indonesian", translate_indonesian)
-        builder.add_node("validate_indonesian", validate_indonesian)
-        builder.add_node("repair_indonesian", repair_indonesian)
+        # -------------------- edges -----------------------
 
-        # Merge / QA
-        # merge_by_id joins the two translation branches, so it must wait until
-        # every other branch has settled before it runs.
-        builder.add_node("merge_by_id", merge_by_id, defer=True)
-        builder.add_node("semantic_alignment_qa", semantic_alignment_qa)
-        builder.add_node("final_validation", final_validation)
-
-        # Entry
+        # Entry, Source generation
         builder.add_edge(START, "initialize_request")
         builder.add_edge("initialize_request", "plan_diversity")
-        builder.add_edge("plan_diversity", "generate_english")
+        builder.add_edge("plan_diversity", "batchify_plan_and_ids")
+        builder.add_edge("batchify_plan_and_ids", "gen_src_batch")
 
-        # English generation loop
-        builder.add_edge("generate_english", "validate_english")
-        builder.add_edge("repair_english", "validate_english")
+        # loop to source generation or go forward to fanned-out parallel grammar batch fixing. 
+        def loop_or_fanout(state: LessonGeneratorState):
+            if len(state["src_batches"]) < len(state["target_ids_batches"]):
+                return "gen_src_batch" # loop: generate the next batch
+            else:
+                return fanout_fix_grammar_batch("fix_src_grammar_batch", state) 
+            
         builder.add_conditional_edges(
-            "validate_english",
-            route_after_english_validation,
-            {
-                ValidStatus.FAIL: "repair_english",
-                ValidStatus.PENDING_BATCH: "generate_english",
-                ValidStatus.SUCCESS: "start_translation",
-            },
+            "gen_src_batch",
+            loop_or_fanout,
+            ['gen_src_batch', "fix_src_grammar_batch"],
+        )
+        builder.add_edge("fix_src_grammar_batch", "apply_pending_to_src")
+
+        # Translation
+        builder.add_edge("apply_pending_to_src", "start_translation")
+
+        builder.add_conditional_edges(
+            "start_translation",
+            lambda state: fanout_translation("translate_src_batch", state),
+            ["translate_src_batch"],
+        )
+        builder.add_edge("translate_src_batch", "apply_pending_to_trans")
+
+        # Fix translation grammar
+        builder.add_conditional_edges(
+            "apply_pending_to_trans",
+            lambda state: fanout_fix_grammar_batch("fix_trans_grammar_batch", state) ,
+            ["fix_trans_grammar_batch"],
+        )
+        builder.add_edge("fix_trans_grammar_batch", "save_fixed_translation")
+
+        # loop to the next translation or concatenate all the results.
+        def loop_or_merge(state: LessonGeneratorState):
+            if len(state["translations_dict"]) < len(state["request"].translation_languages):
+                return "start_translation" # loop: translate the next batch
+            else:
+                return "final_merge_by_uid"
+            
+        builder.add_conditional_edges(
+            "save_fixed_translation",
+            loop_or_merge,
+            ["start_translation", "final_merge_by_uid"],
         )
 
-        # Parallel translation: the validated English source fans out into
-        # independent translation branches.
-        builder.add_edge("start_translation", "translate_chinese")
-        builder.add_edge("translate_chinese", "validate_chinese")
-        builder.add_edge("repair_chinese", "validate_chinese")
-        builder.add_conditional_edges(
-            "validate_chinese",
-            route_after_chinese_validation,
-            {
-                ValidStatus.FAIL: "repair_chinese",
-                ValidStatus.SUCCESS: "merge_by_id",
-            },
-        )
-
-        builder.add_edge("start_translation", "translate_indonesian")
-        builder.add_edge("translate_indonesian", "validate_indonesian")
-        builder.add_edge("repair_indonesian", "validate_indonesian")
-        builder.add_conditional_edges(
-            "validate_indonesian",
-            route_after_indonesian_validation,
-            {
-                ValidStatus.FAIL: "repair_indonesian",
-                ValidStatus.SUCCESS: "merge_by_id",
-            },
-        )
-
-        # Merge the two branches back into one: id alignment.
-        builder.add_edge("merge_by_id", "semantic_alignment_qa")
-        builder.add_conditional_edges(
-            "semantic_alignment_qa",
-            route_after_semantic_qa,
-            {
-                "repair_chinese": "repair_chinese",
-                "repair_indonesian": "repair_indonesian",
-                "final_validation": "final_validation",
-            },
-        )
-
-        builder.add_edge("final_validation", END)
+        # final step
+        builder.add_edge("final_merge_by_uid", END)
 
         return builder.compile()
 
-    def _build_initial_state(
-        self,
-        input: LessonGenerationRequest,
-    ) -> LessonGeneratorState:
-        
-        return LessonGeneratorState(
-            topic=input.topic,
-            difficulty=input.difficulty,
-            target_count=input.count,
-            batch_size=input.batch_size,
-            existing_english_sentences=input.existing_english_sentences,
-        )
-
-    def _build_context(
-        self,
-        llm_config: LLMConfig,
-        user_id: str,
-    ) -> BasicWorkflowContext:
-        
-        return BasicWorkflowContext(
-            user_id=user_id,
-            llm_runtime=LLMRuntime(config=llm_config),
-        )
 
     def invoke(
         self,
@@ -194,12 +126,21 @@ class LessonGenerator:
         """
 
         final_state: LessonGeneratorState = self.graph.invoke(
-            input=self._build_initial_state(input),
-            context=self._build_context(llm_config, user_id),
-            config={"recursion_limit": RECURSION_LIMIT},
+            input=LessonGeneratorState(
+                request=input
+            ),
+            context=BasicWorkflowContext(
+                user_id=user_id,
+                llm_runtime=LLMRuntime(config=llm_config),
+            ),
+            config={
+                "recursion_limit": RECURSION_LIMIT,
+                "max_concurrency": input.max_concurrency,
+            },
         )
 
         return final_state["final_items"]
+
 
     async def ainvoke(
         self,
@@ -211,9 +152,17 @@ class LessonGenerator:
         """Async version of `invoke`."""
 
         final_state: LessonGeneratorState = await self.graph.ainvoke(
-            input=self._build_initial_state(input),
-            context=self._build_context(llm_config, user_id),
-            config={"recursion_limit": RECURSION_LIMIT},
+            input=LessonGeneratorState(
+                request=input
+            ),
+            context=BasicWorkflowContext(
+                user_id=user_id,
+                llm_runtime=LLMRuntime(config=llm_config),
+            ),
+            config={
+                "recursion_limit": RECURSION_LIMIT,
+                "max_concurrency": input.max_concurrency,
+            },
         )
 
         return final_state["final_items"]

@@ -1,5 +1,5 @@
 import gradio as gr
-from app.workflow._commons_.llm_config import LLMConfig
+from app.workflow._core_.llm_config import LLMConfig
 from app.utils.paths import PATH_LLMS
 import json
 

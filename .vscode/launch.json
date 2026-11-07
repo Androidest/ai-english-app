@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: app.workflow._commons_.template",
+            "name": "Python Debugger: app.workflow._core_.template",
             "type": "debugpy",
             "request": "launch",
-            "module": "app.workflow._commons_.template",
+            "module": "app.workflow._core_.template",
             "justMyCode": false,
         },
         {

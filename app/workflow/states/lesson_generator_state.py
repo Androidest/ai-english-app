@@ -3,56 +3,40 @@ from __future__ import annotations
 import operator
 from typing import Annotated, TypedDict
 
+from app.utils.types import Language
 from app.workflow.schemas.diversity_plan import DiversityPlan
-from app.workflow.schemas.english_sentence import EnglishSentence
-from app.workflow.schemas.translation import TranslationItem
-from app.workflow.states.valid_status import ValidStatus
+from app.workflow.schemas.sentence_batch import SentenceBatch
+from app.workflow.schemas.lesson_generation_request import LessonGenerationRequest
 
 
 class LessonGeneratorState(TypedDict, total=False):
     """State of the multilingual lesson generation workflow."""
 
     # User request
-    topic: str
-    difficulty: str
-    target_count: int
-    batch_size: int
-    existing_english_sentences: list[str]
-
+    request: LessonGenerationRequest
+    
     # Application-generated immutable record ids
     target_ids: list[str]
 
     # Diversity planning
     diversity_plan: DiversityPlan
 
-    # Canonical English source
-    english_items: list[EnglishSentence]
+    # batchified plan and ids
+    target_ids_batches: list[set[str]]
+    diversity_plan_batches: list[DiversityPlan]
 
-    # Current source-generation batch
-    current_english_batch_ids: list[str]
+    # The canonical source of trust. 
+    src_batches: list[SentenceBatch]
 
-    # Translation branches
-    chinese_items: list[TranslationItem]
-    indonesian_items: list[TranslationItem]
+    # It gathers the results from fanned-out multi-parallel nodes after they fan in.
+    # Use 'Annotated' to add a reducer to it for parallel update.
+    pending_batches: Annotated[list[SentenceBatch], operator.add] # a result pending for merging
 
-    # Routing statuses
-    valid_status: ValidStatus
-    cn_valid_status: ValidStatus
-    id_valid_status: ValidStatus
-
-    # Records that failed basic validation and need repair
-    english_failed_ids: list[str]
-    chinese_failed_ids: list[str]
-    indonesian_failed_ids: list[str]
-
-    # Retry counters
-    english_retry_count: int
-    chinese_retry_count: int
-    indonesian_retry_count: int
-
+    # translated from the canonical source of trust. 
+    translated_batches: list[SentenceBatch]
+    # Store all translations in different languages. 
+    translations_dict: dict[str, list[SentenceBatch]] # The keys are the languages, values are the batches.
+    
     # Final output
-    final_items: list[dict[str, str]]
-
-    # Diagnostics. Written by several nodes (some in parallel), so it is
-    # append-only.
-    errors: Annotated[list[str], operator.add]
+    # Every list item is a set of sentences, including the source and its translations.
+    final_items: list[dict[str, str]] # The keys of the dictionaries are the the languages, values are the sentences.

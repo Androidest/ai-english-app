@@ -1,8 +1,8 @@
 from langgraph.runtime import Runtime
 
-from app.workflow._commons_.context import BasicWorkflowContext
-from app.workflow._commons_.runnable import ConstrainedOutputWithRetry
-from app.workflow.nodes._common import normalize_text
+from app.workflow._core_.context import BasicWorkflowContext
+from app.workflow._core_.runnable import ConstrainedOutputWithRetry
+from app.workflow.schema_handlers.sentence_batch_handler import normalize_text
 from app.workflow.schemas.final_qa import FinalQA
 from app.workflow.states.lesson_generator_state import LessonGeneratorState
 

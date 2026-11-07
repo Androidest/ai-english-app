@@ -1,7 +1,8 @@
 import gradio as gr
-from app.workflow._commons_.llm_config import LLMConfig, ProviderType
+from app.workflow._core_.llm_config import LLMConfig
 from app.ui.confirm_dialog import ConfirmDialog
 from app.ui.state_llms import State_LLMs, PATH_LLMS
+from app.utils.types import ProviderType
 import time
        
 class Tab_AI:
