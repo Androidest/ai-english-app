@@ -11,7 +11,7 @@ def prepare_src_grammar_repair(
 ) -> LessonGeneratorState:
     
     """
-    Node: Prepare the request for the source-grammar-repairing subgraph.
+    Node: Prepare the request for the Grammar Correction subgraph.
     """
 
     request = IssueCorrectionRequest(
