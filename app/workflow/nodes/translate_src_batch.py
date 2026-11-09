@@ -7,7 +7,7 @@ from app.workflow.schemas.sentence_batch import SentenceBatch
 from app.workflow.states.lesson_generator_state import LessonGeneratorState
 from app.workflow.states.parallel_batch_state import ParallelBatchState
 from app.workflow.schema_handlers.sentence_batch_handler import (
-    validate_batch_ids,
+    validate_sentence_batch_uids,
     validate_batch_sentence,
 )
 
@@ -64,7 +64,7 @@ def fanout_translation(
         Send(
             node=node, # fan-out into multi-parallel node
             arg=ParallelBatchState(
-                batch_idx=idx,
+                batch_id=idx,
                 batch=src_batches[idx],
                 main_state=state,
                 language=request.translation_languages[lang_idx],
@@ -84,6 +84,7 @@ def translate_src_batch(
     """
 
     # local state
+    batch_id = state["batch_id"]
     batch = state["batch"]
     target_language = state["language"]
     main_state = state["main_state"]
@@ -94,8 +95,8 @@ def translate_src_batch(
 
     def verify_cb(o: SentenceBatch):
     
-        ok, reason = validate_batch_ids(
-            expected_batch_ids=batch_ids,
+        ok, reason = validate_sentence_batch_uids(
+            expected_uids=batch_ids,
             actual_batch=o
         )
 
@@ -112,7 +113,7 @@ def translate_src_batch(
             raise Exception(reason)
 
     llm = runtime.context.llm_runtime.get_model(
-        temperature=0.4,
+        temperature=1.3,
     )
 
     llm = ConstrainedOutputWithRetry(
@@ -134,5 +135,5 @@ def translate_src_batch(
     )
 
     return LessonGeneratorState(
-        pending_batches=[result],
+        pending_batches={ batch_id: result },
     ) 

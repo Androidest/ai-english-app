@@ -120,7 +120,7 @@ class ConstrainedOutputWithRetry(Runnable):
                     if output is not None:
                         if self.llm_structured:
                             messages.append(AIMessage(
-                                content="\n".join([json.dumps(obj, indent=2) for obj in output['raw'].content_blocks])
+                                content="\n".join([json.dumps(obj, indent=2, ensure_ascii=False) for obj in output['raw'].content_blocks])
                             ))
                             # messages.append(AIMessage(
                             #     content=out.model_dump_json(indent=2),
@@ -207,7 +207,7 @@ class ConstrainedOutputWithRetry(Runnable):
                 if output is not None:
                     if self.llm_structured:
                         messages.append(AIMessage(
-                            content="\n".join([json.dumps(obj, indent=2) for obj in output['raw'].content_blocks])
+                            content="\n".join([json.dumps(obj, indent=2, ensure_ascii=False) for obj in output['raw'].content_blocks])
                         ))
                         # messages.append(AIMessage(
                         #     content=out.model_dump_json(indent=2),

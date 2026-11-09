@@ -21,19 +21,19 @@ def test_lesson_generator():
 
     request = LessonGenerationRequest(
         source_language="English",
-        source_max_len=100,
+        source_max_len=200,
         topic="Travel and everyday situations",
-        target_count=5,
-        difficulty="A1",
+        target_count=50,
+        difficulty="C2",
 
         translation_languages=["Chinese", "Indonesian"],
 
-        batch_size=3,
+        batch_size=5,
         max_concurrency=10,
     )
 
     workflow = LessonGenerator()
-    workflow.draw_graph_png(PATH_IMAGES/'lesson_generator_v2.png')
+    # workflow.draw_graph_png(PATH_IMAGES/'lesson_generator_v2.png')
 
     items = workflow.invoke(
         input=request,

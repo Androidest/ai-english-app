@@ -93,7 +93,7 @@ class Tab_Lesson_Chosen:
                     gr.Markdown(f"{id}", elem_classes=["phrase"], scale=0, min_width=10)
 
                     words = []
-                    all = []
+                    all = 
                     with gr.Row(elem_classes=["phrase-en"]) as row:
                         for i, word in enumerate(en.split(' ')):
                             word = word.strip()

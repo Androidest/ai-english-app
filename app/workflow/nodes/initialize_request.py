@@ -1,8 +1,8 @@
 import uuid
+from langgraph.types import Overwrite
 
 from app.workflow.states.lesson_generator_state import LessonGeneratorState
 from app.workflow.schema_handlers.lesson_generation_request_handler import validate_request
-
 
 def create_uid(index: int) -> str:
     """
@@ -27,6 +27,8 @@ def initialize_request(state: LessonGeneratorState) -> LessonGeneratorState:
 
     return LessonGeneratorState(
         target_ids=target_ids,
-        src_batches=[],
+        previous_sentences=[],
+        src_batches={},
         translations_dict={},
+        pending_batches=Overwrite({}),
     )

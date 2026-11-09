@@ -361,7 +361,7 @@ class State_Lessons:
             return sorted(lessons.items(), key=lambda item: item[0])
         elif sort_by == SORT_ALPHA_Z_A:
             return sorted(lessons.items(), key=lambda item: item[0], reverse=True)
-        return []
+        return 
     
     def filter_lessons(self, lessons: dict, search: str) -> dict:
         if search == "":

@@ -44,7 +44,7 @@ class WorkflowBase(ABC):
         if not path.parent.exists():
             path.parent.mkdir(parents=True, exist_ok=True)
         
-        png_bytes = self.graph.get_graph(xray=True).draw_mermaid_png()
+        png_bytes = self.graph.get_graph(xray=True).draw_mermaid_png(max_retries=5, retry_delay=2.0)
         with open(path, "wb") as f:
             f.write(png_bytes)
 

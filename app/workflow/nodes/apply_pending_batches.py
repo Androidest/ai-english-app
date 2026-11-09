@@ -25,7 +25,7 @@ def make_apply_pending_batches_node(
 
         return { 
             f"{target_state_key}": copy.deepcopy(state["pending_batches"]),
-            "pending_batches": Overwrite([]),
+            "pending_batches": Overwrite({}),
         }
 
     return apply_pending_batches

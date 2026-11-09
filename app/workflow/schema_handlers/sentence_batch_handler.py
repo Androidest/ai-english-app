@@ -1,50 +1,19 @@
 from app.workflow.schemas.sentence_batch import SentenceBatch
+from app.workflow.schema_handlers.commons import validate_batch_uids
 
-
-def validate_batch_ids(
-    expected_batch_ids: set[str],
+def validate_sentence_batch_uids(
+    expected_uids: set[str],
     actual_batch: SentenceBatch,
     check_missing: bool=True,
 ) -> tuple[bool, str]:
     
-    """Validate that the LLM returned exactly the requested unique IDs."""
+    """Validate whether the supplied batch UIDs match the expected UIDs."""
 
-    actual_ids = set([item.uid for item in actual_batch.items])
-
-    if actual_ids != expected_batch_ids:
-        # error msg
-        error = ["# Structured-output alignment failure"]
-
-        # ---- counting duplicates -----
-        id_count = {}
-        for id in actual_ids:
-            id_count[id] = id_count.get(id, 0) + 1
-    
-        duplicates = [
-            f"- '{id}': has {count-1} duplicates." 
-            for id, count in id_count.items() 
-            if count > 1
-        ]
-            
-        if duplicates != "":
-            error.append(f"[Duplicate UID]")
-            error.extend(duplicates)
-            error.append("\n")
-
-        error.append(f"[UID mismatch]")
-
-        # ---- check extra ids ----
-        extra = sorted(actual_ids - expected_batch_ids)
-        error.append(f"- Unexpected extra ids: {extra}")
-
-        # ---- check missing ids ----
-        if check_missing:
-            missing = sorted(expected_batch_ids - actual_ids)
-            error.append(f"- Missing ids: {missing}")
-
-        return False, '\n'.join(error)
-
-    return True, ""
+    return validate_batch_uids(
+        expected_uids=expected_uids,
+        actual_uids=set(item.uid for item in actual_batch.items),
+        check_missing=check_missing,
+    )
 
 
 def validate_batch_sentence(

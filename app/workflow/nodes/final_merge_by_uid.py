@@ -26,12 +26,12 @@ def final_merge_by_uid(
     translations_dict = state["translations_dict"]
 
     # Map all the source sentences in to a dictionary by uid.
-    src_map = extract_uid_sentence_map(src_batches)
+    src_map = extract_uid_sentence_map(src_batches.values())
 
     # Map all the translation sentences within each language in to a dictionary by uid.
     # Then store them into a bigger dictionary with the language as the key.
     trans_maps = { 
-        lang: extract_uid_sentence_map(trans) 
+        lang: extract_uid_sentence_map(trans.values()) 
         for lang, trans in translations_dict.items() 
     }
 

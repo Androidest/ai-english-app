@@ -7,7 +7,7 @@ from app.workflow.states.lesson_generator_state import LessonGeneratorState
 class ParallelBatchState(TypedDict, total=False):
     """Local state for the parallel fanned-out nodes."""
 
-    batch_idx: int
+    batch_id: int
     batch: SentenceBatch
     main_state: LessonGeneratorState
     language: str

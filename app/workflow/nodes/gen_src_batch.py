@@ -5,7 +5,7 @@ from app.workflow._core_.runnable import ConstrainedOutputWithRetry
 from app.workflow.schemas.sentence_batch import SentenceBatch
 from app.workflow.states.lesson_generator_state import LessonGeneratorState
 from app.workflow.schema_handlers.sentence_batch_handler import (
-    validate_batch_ids, 
+    validate_sentence_batch_uids, 
     validate_batch_sentence,
 )
 
@@ -13,9 +13,9 @@ SYS_PROMPT_TEMPLATE = """You are an expert {source_language} learning content ge
 Generate a batch of {source_language} sentences accoding to the given requirements, and the given batch of unique IDs.
 
 Hard requirements:
-- Generate exactly one {source_language} sentence (item val) for every supplied immutable unique ID (item uid).
-- Treat each uid only as keys and preserve them exactly. Never create, delete, rename, or modify a uid.
-- Return each sentence along with each uid accoding to the ouput format.
+- Generate exactly one {source_language} sentence (item val) for every supplied immutable unique ID (item UID).
+- Treat the UIDs as keys only and preserve them exactly as supplied. Never create, delete, rename, or modify a uid.
+- Return each sentence along with each UID accoding to the ouput format.
 - Sentences must be natural, grammatical, concise, and appropriate for the requested learner difficulty.
 - Stay on the requested topic.
 - Follow the given diversity plan for the next batch.
@@ -50,20 +50,6 @@ Next batch of unique IDs that MUST be returned:
 Generate the next {source_language} source batch, exactly {batch_count} items. 
 """
 
-def get_latest_sentences(
-    src_batches:list[SentenceBatch],
-    count:int
-) -> list[str]:
-
-    sentences: list[str] = []
-    for batch in reversed(src_batches):
-        for item in reversed(batch.items):
-            sentences.append(item.val)
-            count -= 1
-            if count <= 0:
-                return sentences
-    return sentences
-
 
 def gen_src_batch(
     state: LessonGeneratorState,
@@ -80,28 +66,29 @@ def gen_src_batch(
 
     request = state["request"]
     src_batches = state["src_batches"]
-    next_batch_idx = len(src_batches)
-    batch_ids = state["target_ids_batches"][next_batch_idx]
-    batch_plan = state["diversity_plan_batches"][next_batch_idx]
+    previous_sentences = state["previous_sentences"]
+    cur_batch_idx = len(src_batches)
+    uids_batch = state["target_ids_batches"][cur_batch_idx]
+    plan_batch = state["diversity_plan_batches"][cur_batch_idx]
 
     batch_ids_txt = "\n".join(
         f'- uid="{uid}"'
-        for uid in batch_ids
+        for uid in uids_batch
     )
 
     batch_plan_txt = "\n".join(
         f"- {bucket.category}: {bucket.count} items; {bucket.desc}"
-        for bucket in batch_plan.buckets
+        for bucket in plan_batch.buckets
     )
 
     previous_sentences_txt = "\n".join(
         f"- {sentence}" 
-        for sentence in get_latest_sentences(src_batches, count=60)
+        for sentence in previous_sentences[-60:]
     )
 
     def verify_cb(o: SentenceBatch):
-        ok, reason = validate_batch_ids(
-            expected_batch_ids=batch_ids,
+        ok, reason = validate_sentence_batch_uids(
+            expected_uids=uids_batch,
             actual_batch=o,
         )
 
@@ -119,7 +106,7 @@ def gen_src_batch(
 
 
     llm = runtime.context.llm_runtime.get_model(
-        temperature=0.9,
+        temperature=1.0,
     )
 
     llm = ConstrainedOutputWithRetry(
@@ -141,13 +128,15 @@ def gen_src_batch(
             previous_sentences_txt
             or "(none)"
         ),
-        batch_count=len(batch_ids),
+        batch_count=len(uids_batch),
     )
 
     result:SentenceBatch = llm.invoke(
         input=sys_prompt,
     )
 
+    src_batches = { **src_batches, cur_batch_idx: result }
     return LessonGeneratorState(
-        src_batches=src_batches + [result],
+        src_batches=src_batches,
+        previous_sentences=previous_sentences + [ item.val for item in result.items ]
     )
