@@ -3,7 +3,6 @@ import warnings
 
 from app.workflow._core_.context import BasicWorkflowContext
 from app.workflow._core_.llm_config import LLMConfig
-from app.workflow._core_.llm_runtime import LLMRuntime
 from app.workflow._core_.workflow_base import WorkflowBase
 from app.workflow.schemas.lesson_generation_request import LessonGenerationRequest
 from app.workflow.states.lesson_generator_state import LessonGeneratorState
