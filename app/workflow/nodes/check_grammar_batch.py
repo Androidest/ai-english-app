@@ -28,6 +28,7 @@ Hard requirements:
     1. Tone
     2. Vocabulary difficulty level
     3. Semantic intent
+    8. Wording style
 
 Target language:
 {language}

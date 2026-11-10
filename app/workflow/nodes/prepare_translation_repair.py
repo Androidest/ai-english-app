@@ -5,20 +5,22 @@ from app.workflow.schemas.issue_correction_request import IssueCorrectionRequest
 from app.workflow._core_.context import BasicWorkflowContext
 
     
-def prepare_trans_grammar_repair(
+def prepare_translation_repair(
     state: LessonGeneratorState,
     runtime: Runtime[BasicWorkflowContext],
 ) -> LessonGeneratorState:
     
     """
-    Node: Prepare the request for the source-grammar-repairing subgraph.
+    Node: Prepare the request for the Translation Correction subgraph.
     """
 
-    translation_languages = state["request"].translation_languages
+    req = state["request"]
+    source_language = req.source_language
     cur_lang_idx = len(state["translations_dict"])
-    cur_language = translation_languages[cur_lang_idx]
+    cur_language = req.translation_languages[cur_lang_idx]
 
     request = IssueCorrectionRequest(
+        source_language=source_language,
         language=cur_language,
         target_batches_key="translated_batches",
         max_attempts=2,

@@ -16,7 +16,7 @@ from app.workflow.schema_handlers.sentence_batch_handler import (
     merge_batch,
 )
 
-SYS_PROMPT_TEMPLATE = """You are an expert content grammar fixer.
+SYS_PROMPT_TEMPLATE = """You are an expert grammar corrector.
 Repair only the sentences listed below. Each sentence comes with a reason describing its grammar error.
 
 Hard requirements:
@@ -25,12 +25,14 @@ Hard requirements:
 - Output only structured repaired data. Do not add extra explanations, commentary, or preamble.
 - Fix only the grammar error described in the repair reason for each sentence. Do not make unrelated changes.
 - Do not directly copy the supplied sentences. Modification is required; modify them according to their respective repair reasons.
-- Use natural grammar and expressions, but do not deviate far from the original intent.
 - Preserve all of the following whenever possible from the original text:
     1. Tone
     2. Vocabulary difficulty level
     3. Sentence length
     4. Semantic intent
+    5. Numbers and quantities
+    6. Dates and times
+    7. Names and named entities
 
 Target language:
 {language}
@@ -106,7 +108,7 @@ def _build_issue_text(
         if item.uid in reason_by_uid
     ]
     text = "\n".join(items)
-    print(text)
+    # print(text)
     return text
 
 

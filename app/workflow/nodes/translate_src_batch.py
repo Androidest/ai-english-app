@@ -1,11 +1,13 @@
 from langgraph.runtime import Runtime
 from langgraph.types import Send
+import json
 
 from app.workflow._core_.context import BasicWorkflowContext
 from app.workflow._core_.runnable import ConstrainedOutputWithRetry
 from app.workflow.schemas.sentence_batch import SentenceBatch
 from app.workflow.states.lesson_generator_state import LessonGeneratorState
 from app.workflow.states.parallel_batch_state import ParallelBatchState
+from app.workflow.schema_handlers.commons import normalize_text
 from app.workflow.schema_handlers.sentence_batch_handler import (
     validate_sentence_batch_uids,
     validate_batch_sentence,
@@ -19,23 +21,24 @@ Hard requirements:
 - Generate exactly one translated sentence per UID.
 - Treat the UIDs as keys; preserve them exactly as supplied. Never create, delete, rename, or modify a UID.
 - Output only structured translation data. Do not add extra explanations, commentary, or preamble.
-- Do not mechanically translate word-by-word.
 - Do not make duplicate sentences.
 - Do not copy directly from the supplied sentences. 
-- Do not omit meaningful information from the source.
-- Do not add information that does not exist in the source.
-- Use natural grammar and expressions, but do not deviate far from the original intent.
-- Preserve the following as closely as possible:
-    1. the original meaning.
-    2. negation.
-    3. tense/aspect meaning.
-    4. modality.
-    5. numbers and quantities.
-    6. dates and times.
-    7. names and named entities.
-    8. Tone
-    9. Semantic intent
+- Do not omit meaningful information from the source in the translation.
+- Do not add information to the translation that is not present in the source.
+- The translation should not deviate from the original intent.
+- The translation shall take the logic and expression of the source sentence as its baseline and render faithfully, even if the source contains errors.
+- Each translation shall preserve all of the following with its source sentence:
+    1. Semantic intent
+    2. The original meaning
+    3. Negation
+    4. Tense/aspect meaning
+    5. Modality
+    6. Numbers and quantities
+    7. Dates and times
+    8. Names and named entities
+    9. Tone
     10. Causal relationship
+    11. Wording style
 
 Source language:
 {src_language}
@@ -75,6 +78,30 @@ def fanout_translation(
     ]
 
 
+def _build_source_txt(
+    src_batch: SentenceBatch, 
+) -> str:
+
+    """
+    Build the translation payload: 
+    Each line contains one source sentence followed by an UID.
+    """
+
+    pairs = [
+        json.dumps(
+            {
+                "uid": item.uid,
+                "source": normalize_text(item.val),
+            }, 
+            indent=0, 
+            ensure_ascii=False
+        )
+        for item in src_batch.items
+    ]
+    text = "\n".join(pairs)
+    return text
+
+
 def translate_src_batch(
     state: ParallelBatchState,
     runtime: Runtime[BasicWorkflowContext],
@@ -92,10 +119,7 @@ def translate_src_batch(
     src_language = main_state["request"].source_language
 
     batch_ids = set(item.uid for item in batch.items)
-    batch_sentences_txt = "\n".join([
-        item.model_dump_json(indent=0, ensure_ascii=False)
-        for item in batch.items
-    ])
+    batch_sentences_txt = _build_source_txt(batch)
 
     def verify_cb(o: SentenceBatch):
     
@@ -117,7 +141,7 @@ def translate_src_batch(
             raise Exception(reason)
 
     llm = runtime.context.llm_runtime.get_model(
-        temperature=1.3,
+        temperature=0.3,
     )
 
     llm = ConstrainedOutputWithRetry(

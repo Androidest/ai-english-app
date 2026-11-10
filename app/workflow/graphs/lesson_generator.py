@@ -12,13 +12,14 @@ from app.workflow.nodes.plan_diversity import plan_diversity
 from app.workflow.nodes.batchify_plan_and_ids import batchify_plan_and_ids
 from app.workflow.nodes.gen_src_batch import gen_src_batch
 from app.workflow.nodes.prepare_src_grammar_repair import prepare_src_grammar_repair
-from app.workflow.nodes.prepare_trans_grammar_repair import prepare_trans_grammar_repair
+from app.workflow.nodes.prepare_translation_repair import prepare_translation_repair
 from app.workflow.nodes.apply_pending_batches import make_apply_pending_batches_node
 from app.workflow.nodes.empty_node import empty_node
 from app.workflow.nodes.translate_src_batch import translate_src_batch, fanout_translation
 from app.workflow.nodes.save_translation import save_translation
 from app.workflow.nodes.final_merge_by_uid import final_merge_by_uid
 from app.workflow.graphs.grammar_corrector_subgraph import GrammarCorrector_Subgraph
+from app.workflow.graphs.translation_corrector_subgraph import TranslationCorrection_Subgraph
 
 RECURSION_LIMIT = 200
 
@@ -28,7 +29,7 @@ class LessonGenerator(WorkflowBase):
     def __init__(self):
         # subgraphs
         self.src_grammar_corrector = GrammarCorrector_Subgraph("src")
-        # self.trans_grammar_corrector = GrammarCorrector_Subgraph("trans")
+        self.translation_corrector = TranslationCorrection_Subgraph()
         super().__init__()
 
     def _build_graph(self):
@@ -52,8 +53,8 @@ class LessonGenerator(WorkflowBase):
         builder.add_node("start_translation", empty_node)
         builder.add_node("translate_src_batch", translate_src_batch)
         builder.add_node("retrieve_translated_batches", make_apply_pending_batches_node("translated_batches"))
-        # builder.add_node("prepare_trans_grammar_repair", prepare_trans_grammar_repair)
-        # builder.add_node("repair_trans_grammar", self.trans_grammar_corrector.graph)
+        builder.add_node("prepare_translation_repair", prepare_translation_repair)
+        builder.add_node("repair_translation", self.translation_corrector.graph)
         builder.add_node("save_translation", save_translation)
 
         # final merge
@@ -90,9 +91,9 @@ class LessonGenerator(WorkflowBase):
             ["translate_src_batch"],
         )
         builder.add_edge("translate_src_batch", "retrieve_translated_batches")
-        # builder.add_edge("retrieve_translated_batches", "prepare_trans_grammar_repair")
-        # builder.add_edge("prepare_trans_grammar_repair", "repair_trans_grammar")
-        builder.add_edge("retrieve_translated_batches", "save_translation")
+        builder.add_edge("retrieve_translated_batches", "prepare_translation_repair")
+        builder.add_edge("prepare_translation_repair", "repair_translation")
+        builder.add_edge("repair_translation", "save_translation")
 
         # loop to the next translation or concatenate all the results.
         def loop_or_merge(state: LessonGeneratorState):

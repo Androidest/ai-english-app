@@ -14,3 +14,4 @@ class IssueCorrectionRequest(BaseModel):
     target_batches_key: str
     # Max correction attempts
     max_attempts: int = 2
+    source_language: Language | None = None
