@@ -1,6 +1,7 @@
 from langgraph.runtime import Runtime
 from langgraph.types import Send
 import warnings
+import json
 
 from app.workflow.states.lesson_generator_state import LessonGeneratorState
 from app.workflow.states.parallel_batch_state import ParallelBatchState
@@ -8,21 +9,23 @@ from app.workflow._core_.context import BasicWorkflowContext
 from app.workflow._core_.runnable import ConstrainedOutputWithRetry
 from app.workflow.schemas.sentence_batch import SentenceBatch
 from app.workflow.schemas.issue_batch import IssueBatch
+from app.workflow.schema_handlers.commons import normalize_text
 from app.workflow.schema_handlers.sentence_batch_handler import (
     validate_sentence_batch_uids,
     validate_batch_sentence,
     merge_batch,
 )
 
-SYS_PROMPT_TEMPLATE = """You are an expert {language} content grammar fixer.
+SYS_PROMPT_TEMPLATE = """You are an expert content grammar fixer.
 Repair only the sentences listed below. Each sentence comes with a reason describing its grammar error.
 
 Hard requirements:
-- Fix only the grammar error described in the repair reason for each sentence. Do not make unrelated changes.
-- Treat the UIDs as keys only and preserve them exactly as supplied. Never create, delete, rename, or modify an UID.
 - Generate exactly one repaired sentence per UID.
-- Do not directly copy the supplied sentences. Modify them per their repair reasons.
-- Return only structured output. Do not add explanations or commentary.
+- Treat the UIDs as keys; preserve them exactly as supplied. Never create, delete, rename, or modify a UID.
+- Output only structured repaired data. Do not add extra explanations, commentary, or preamble.
+- Fix only the grammar error described in the repair reason for each sentence. Do not make unrelated changes.
+- Do not directly copy the supplied sentences. Modification is required; modify them according to their respective repair reasons.
+- Use natural grammar and expressions, but do not deviate far from the original intent.
 - Preserve all of the following whenever possible from the original text:
     1. Tone
     2. Vocabulary difficulty level
@@ -35,14 +38,8 @@ Target language:
 Sentences to repair (with repair reasons):
 {items_to_fix}
 
-Return only the repaired items.
+Now, Output the updated sentences.
 """
-
-ISSUE_TEMPLATE = """
-* UID: '{uid}'
-* Sentence: '{sentence}'
-* Repair reason: '{reason}'
---------------"""
 
 COPY_ERROR_TEMPLATE = """The following uids were returned with text identical to the original:
 {uids}
@@ -85,7 +82,7 @@ def fanout_fix_grammar_batch(
     ]
 
 
-def _build_items_to_fix(
+def _build_issue_text(
     batch: SentenceBatch, 
     issue_batch: IssueBatch,
 ) -> str:
@@ -96,15 +93,15 @@ def _build_items_to_fix(
 
     reason_by_uid = {issue.uid: issue.reason for issue in issue_batch.issues}
     items = [
-        ISSUE_TEMPLATE.format(
-            uid=item.uid,
-            sentence=item.val,
-            reason=reason_by_uid[item.uid],
-        )
+        json.dumps({
+            "uid": item.uid,
+            "val": normalize_text(item.val),
+            "reason": normalize_text(reason_by_uid[item.uid]),
+        }, ensure_ascii=False)
         for item in batch.items
         if item.uid in reason_by_uid
     ]
-    text = "".join(items)
+    text = "\n".join(items)
     print(text)
     return text
 
@@ -127,7 +124,7 @@ def fix_grammar_batch(
         return LessonGeneratorState(corrected_batches={})
 
     uids_batch = set(issue.uid for issue in issue_batch.issues)
-    items_to_fix_txt = _build_items_to_fix(batch, issue_batch)
+    items_to_fix_txt = _build_issue_text(batch, issue_batch)
 
     def verify_cb(o: SentenceBatch):
 

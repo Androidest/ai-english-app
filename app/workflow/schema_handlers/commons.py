@@ -1,3 +1,5 @@
+import re
+
 def validate_batch_uids(
     expected_uids: set[str],
     actual_uids: set[str],
@@ -44,3 +46,8 @@ def validate_batch_uids(
             return False, "[UID mismatch] Structured-output alignment failure!" + '\n'.join(error)
 
     return True, ""
+
+def normalize_text(text: str) -> str:
+    text = text.strip()
+    text = re.sub(r"\s+", " ", text)
+    return text

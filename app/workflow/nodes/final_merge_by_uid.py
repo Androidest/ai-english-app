@@ -1,15 +1,9 @@
 from langgraph.runtime import Runtime
-import re
 
 from app.workflow.states.lesson_generator_state import LessonGeneratorState
 from app.workflow._core_.context import BasicWorkflowContext
 from app.workflow.schema_handlers.sentence_batch_handler import extract_uid_sentence_map
-
-
-def normalize_text(text: str) -> str:
-    text = text.strip()
-    text = re.sub(r"\s+", " ", text)
-    return text
+from app.workflow.schema_handlers.commons import normalize_text
 
 
 def final_merge_by_uid(

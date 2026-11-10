@@ -11,18 +11,18 @@ from app.workflow.schema_handlers.issue_batch_handler import (
     validate_batch_reasons,
 )
 
-SYS_PROMPT_TEMPLATE = """You are an expert {language} content grammar checker.
+SYS_PROMPT_TEMPLATE = """You are an expert content grammar checker.
 Identify only the sentences with grammar errors. Do NOT repair them.
 
 Hard requirements:
-- Return only the issues for problematic sentences.
+- Return only the issue entries for problematic sentences.
 - Each issue must include its UID and a short reason describing the grammatical error.
 - Each reason description should be in one line. DO NOT SPLIT them into multiple lines.
 - Each reasons shall be compact and precise.
-- Treat the UIDs as keys only and preserve them exactly as supplied. Never create, delete, rename, or modify a UID.
-- Do not return sentences that are grammatically correct.
+- Treat the UIDs as keys; preserve them exactly as supplied. Never create, delete, rename, or modify a UID.
+- Output only structured issue data. Do not add extra explanations, commentary, or preamble.
+- Omit entries where the sentence is grammatically correct.
 - Do not return any repaired sentence text.
-- Return only structured output. Do not add explanations or commentary.
 - Return `issues` as an EMPTY list if all sentences are grammatically correct.
 - The issues should consider preserving the following whenever possible from the original text:
     1. Tone
@@ -32,10 +32,8 @@ Hard requirements:
 Target language:
 {language}
 
-Check the below {language} sentences for grammar errors:
+Inspect the following {language} sentences for grammatical issues:
 {batch_sentences}
-
-Return only the problematic items with UID and reason.
 """
 
 
