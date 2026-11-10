@@ -82,7 +82,10 @@ def check_grammar_batch(
     language = state["main_state"]["issue_correction_request"].language
 
     uids_batch = set(item.uid for item in batch.items)
-    sentence_batch_txt = batch.model_dump_json(indent=2)
+    sentence_batch_txt = "\n".join([
+        item.model_dump_json(indent=0, ensure_ascii=False)
+        for item in batch.items
+    ])
 
     def verify_cb(o: IssueBatch):
 

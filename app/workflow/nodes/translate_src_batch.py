@@ -92,7 +92,10 @@ def translate_src_batch(
     src_language = main_state["request"].source_language
 
     batch_ids = set(item.uid for item in batch.items)
-    batch_sentences_txt = batch.model_dump_json(indent=2)
+    batch_sentences_txt = "\n".join([
+        item.model_dump_json(indent=0, ensure_ascii=False)
+        for item in batch.items
+    ])
 
     def verify_cb(o: SentenceBatch):
     
