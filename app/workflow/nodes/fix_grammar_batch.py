@@ -93,11 +93,15 @@ def _build_issue_text(
 
     reason_by_uid = {issue.uid: issue.reason for issue in issue_batch.issues}
     items = [
-        json.dumps({
-            "uid": item.uid,
-            "val": normalize_text(item.val),
-            "reason": normalize_text(reason_by_uid[item.uid]),
-        }, ensure_ascii=False)
+        json.dumps(
+            {
+                "uid": item.uid,
+                "val": normalize_text(item.val),
+                "reason": normalize_text(reason_by_uid[item.uid]),
+            }, 
+            indent=0, 
+            ensure_ascii=False
+        )
         for item in batch.items
         if item.uid in reason_by_uid
     ]
