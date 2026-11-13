@@ -1,15 +1,15 @@
 # Get the LLM configs from the test env
+import asyncio
 from app.utils.config import set_config
 set_config('test')
 from app.utils.config import config
 from app.utils.paths import PATH_IMAGES
-
 from app.workflow._core_.llm_config import LLMConfig
 from app.workflow.graphs.lesson_generator import LessonGenerator
 from app.workflow.schemas.lesson_generation_request import LessonGenerationRequest
 
 
-def test_lesson_generator():
+async def test_lesson_generator():
 
     llm_config = LLMConfig(
         alias="test",
@@ -26,26 +26,21 @@ def test_lesson_generator():
         target_count=50,
         difficulty="C2",
 
-        translation_languages=["Chinese", "Indonesian"],
+        translation_languages=["Chinese"],
 
-        batch_size=5,
+        batch_size=10,
         max_concurrency=10,
     )
 
     workflow = LessonGenerator()
     # workflow.draw_graph_png(PATH_IMAGES/'lesson_generator_v2.png')
 
-    items = workflow.invoke(
+    items = await workflow.ainvoke(
         input=request,
         llm_config=llm_config,
         user_id="xxx",
     )
     
-    # for batch in items:
-    #     print("---------------------------------")
-    #     for sen in batch.items:
-    #         print("- ", sen.val)
-
     assert len(items) == request.target_count
 
     for item in items:
@@ -54,5 +49,9 @@ def test_lesson_generator():
             assert v.strip()
             print(f"{k}: {v}")
 
+    print("==============[logs]=================")
+    for log in workflow.last_state["logs"]:
+        print(log)
+
 if __name__ == "__main__":
-    test_lesson_generator()
+    asyncio.run(test_lesson_generator())

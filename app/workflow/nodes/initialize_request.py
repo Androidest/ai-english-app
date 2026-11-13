@@ -31,4 +31,5 @@ def initialize_request(state: LessonGeneratorState) -> LessonGeneratorState:
         src_batches={},
         translations_dict={},
         pending_batches=Overwrite({}),
+        logs=[],
     )

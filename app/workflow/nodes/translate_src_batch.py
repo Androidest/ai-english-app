@@ -1,6 +1,6 @@
 from langgraph.runtime import Runtime
 from langgraph.types import Send
-import json
+from app.workflow.schema_handlers.commons import item_to_text
 
 from app.workflow._core_.context import BasicWorkflowContext
 from app.workflow._core_.runnable import ConstrainedOutputWithRetry
@@ -40,14 +40,14 @@ Hard requirements:
     10. Causal relationship
     11. Wording style
 
+Target translation language:
+{target_language}    
+
 Source language:
 {src_language}
 
 Source sentences:
 {src_sentences_txt}
-
-Translate source into the target language:
-{target_language}
 """
 
 
@@ -78,30 +78,6 @@ def fanout_translation(
     ]
 
 
-def _build_source_txt(
-    src_batch: SentenceBatch, 
-) -> str:
-
-    """
-    Build the translation payload: 
-    Each line contains one source sentence followed by an UID.
-    """
-
-    pairs = [
-        json.dumps(
-            {
-                "uid": item.uid,
-                "source": normalize_text(item.val),
-            }, 
-            indent=0, 
-            ensure_ascii=False
-        )
-        for item in src_batch.items
-    ]
-    text = "\n".join(pairs)
-    return text
-
-
 def translate_src_batch(
     state: ParallelBatchState,
     runtime: Runtime[BasicWorkflowContext],
@@ -119,7 +95,7 @@ def translate_src_batch(
     src_language = main_state["request"].source_language
 
     batch_ids = set(item.uid for item in batch.items)
-    batch_sentences_txt = _build_source_txt(batch)
+    batch_sentences_txt = item_to_text(batch)
 
     def verify_cb(o: SentenceBatch):
     

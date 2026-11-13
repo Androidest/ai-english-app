@@ -1,4 +1,5 @@
 import re
+from pydantic_ai import format_as_xml
 
 def validate_batch_uids(
     expected_uids: set[str],
@@ -51,3 +52,32 @@ def normalize_text(text: str) -> str:
     text = text.strip()
     text = re.sub(r"\s+", " ", text)
     return text
+
+
+def item_to_text(
+    item: any,
+) -> str:
+    """
+    Format the item as a kind of structured text for system prompts injection.
+    Current format: XML.
+    `item` can be a dict, list or any other object.
+    """
+    INDENT = "  "
+    if type(item) is list:
+        return format_as_xml(
+            item, 
+            root_tag="batch", 
+            item_tag="item",
+            indent=INDENT,
+        )
+    elif type(item) is dict:
+        return format_as_xml(
+            item, 
+            root_tag="item",
+            indent=INDENT,
+        )
+    else:
+        return format_as_xml(
+            item, 
+            indent=INDENT,
+        )

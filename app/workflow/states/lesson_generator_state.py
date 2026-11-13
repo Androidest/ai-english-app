@@ -57,3 +57,6 @@ class LessonGeneratorState(TypedDict, total=False):
     # ------- Final output --------
     # Every list item is a set of sentences, including the source and its translations.
     final_items: list[dict[str, str]] # The keys of the dictionaries are the the languages, values are the sentences.
+
+    pending_logs: Annotated[list[str], operator.add]
+    logs: list[str]

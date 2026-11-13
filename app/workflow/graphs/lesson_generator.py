@@ -31,6 +31,7 @@ class LessonGenerator(WorkflowBase):
         self.src_grammar_corrector = GrammarCorrector_Subgraph("src")
         self.translation_corrector = TranslationCorrection_Subgraph()
         super().__init__()
+        self.last_state = None
 
     def _build_graph(self):
 
@@ -85,28 +86,23 @@ class LessonGenerator(WorkflowBase):
 
         # Translation
         builder.add_edge("repair_src_grammar", "start_translation")
+
+        def trans_or_final_merge(state: LessonGeneratorState):
+            if len(state["translations_dict"]) < len(state["request"].translation_languages):
+                return fanout_translation("translate_src_batch", state)
+            else:
+                return "final_merge_by_uid"
+            
         builder.add_conditional_edges(
             "start_translation",
-            lambda state: fanout_translation("translate_src_batch", state),
-            ["translate_src_batch"],
+            trans_or_final_merge,
+            ["translate_src_batch", "final_merge_by_uid"],
         )
         builder.add_edge("translate_src_batch", "retrieve_translated_batches")
         builder.add_edge("retrieve_translated_batches", "prepare_translation_repair")
         builder.add_edge("prepare_translation_repair", "repair_translation")
         builder.add_edge("repair_translation", "save_translation")
-
-        # loop to the next translation or concatenate all the results.
-        def loop_or_merge(state: LessonGeneratorState):
-            if len(state["translations_dict"]) < len(state["request"].translation_languages):
-                return "start_translation" # loop: translate the next batch
-            else:
-                return "final_merge_by_uid"
-            
-        builder.add_conditional_edges(
-            "save_translation",
-            loop_or_merge,
-            ["start_translation", "final_merge_by_uid"],
-        )
+        builder.add_edge("save_translation", "start_translation") # loop
         
         # final step
         builder.add_edge("final_merge_by_uid", END)
@@ -142,7 +138,7 @@ class LessonGenerator(WorkflowBase):
                 "max_concurrency": input.max_concurrency,
             },
         )
-
+        self.last_state = final_state
         return final_state["final_items"]
 
 
@@ -168,7 +164,7 @@ class LessonGenerator(WorkflowBase):
                 "max_concurrency": input.max_concurrency,
             },
         )
-
+        self.last_state = final_state
         return final_state["final_items"]
 
 

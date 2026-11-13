@@ -12,3 +12,4 @@ pywebview==6.2.1
 pandas==3.1.0
 openpyxl==3.1.5
 pydantic==2.14.2
+pydantic-ai-slim==2.68.0

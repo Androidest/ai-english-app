@@ -1,6 +1,6 @@
 from langgraph.runtime import Runtime
 from langgraph.types import Send
-import json
+from app.workflow.schema_handlers.commons import item_to_text
 
 from app.workflow.states.lesson_generator_state import LessonGeneratorState
 from app.workflow.states.parallel_batch_state import ParallelBatchState
@@ -104,18 +104,14 @@ def _build_batch_pair_txt(
 
     uid_src_map = { item.uid: item.val for item in src_batch.items }
     pairs = [
-        json.dumps(
-            {
-                "uid": item.uid,
-                "source": normalize_text(uid_src_map[item.uid]),
-                "translation": normalize_text(item.val)
-            }, 
-            indent=0, 
-            ensure_ascii=False
-        )
+        {
+            "uid": item.uid,
+            "source": normalize_text(uid_src_map[item.uid]),
+            "trans": normalize_text(item.val)
+        }
         for item in trans_batch.items
     ]
-    text = "\n".join(pairs)
+    text = item_to_text(pairs)
     return text
 
 

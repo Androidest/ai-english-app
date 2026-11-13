@@ -1,7 +1,7 @@
 from langgraph.runtime import Runtime
 from langgraph.types import Send
 import warnings
-import json
+from app.workflow.schema_handlers.commons import item_to_text
 
 from app.workflow.states.lesson_generator_state import LessonGeneratorState
 from app.workflow.states.parallel_batch_state import ParallelBatchState
@@ -97,29 +97,26 @@ def _build_items_to_fix(
     followed by an UID and a repair reason.
     """
 
-    uid_src_map = { item.uid: item.val for item in src_batch.items }
-    uid_tran_map = { item.uid: item.val for item in trans_batch.items }
+    uid_issue_map = { item.uid: item.reason for item in issue_batch.issues }
+    uid_trans_map = { item.uid: item.val for item in trans_batch.items if item.uid in uid_issue_map}
     if output_batch:
         uid_out_map = { item.uid: item.val for item in output_batch.items }
 
     items = []
-    for item in issue_batch.issues:
-        obj = {
-            "uid": item.uid,
-            "source": normalize_text(uid_src_map[item.uid]),
-            "translation": normalize_text(uid_tran_map[item.uid]),
-            "reason": item.reason,
-        }
-        if output_batch:
-            obj["repaired"] = normalize_text(uid_out_map[item.uid])
+    for item in src_batch.items:
+        if item.uid in uid_issue_map:
+            new_item = {
+                "uid": item.uid,
+                "source": normalize_text(item.val),
+                "trans": normalize_text(uid_trans_map[item.uid]),
+                "reason": normalize_text(uid_issue_map[item.uid]),
+            }
+            if output_batch:
+                new_item["repaired"] = normalize_text(uid_out_map[item.uid])
 
-        items.append(json.dumps(
-            obj, 
-            indent=0, 
-            ensure_ascii=False
-        ))
+            items.append(new_item)
 
-    text = "\n".join(items)
+    text = item_to_text(items)
     return text
 
 
@@ -134,6 +131,7 @@ def fix_translation_batch(
     main_state = state["main_state"]
     req = main_state["issue_correction_request"]
     batch_id = state["batch_id"]
+    attemps = req.max_attempts - main_state["remaining_attempts"] + 1
 
     src_batch = main_state["src_batches"][batch_id]
     trans_batch = state["batch"]
@@ -200,9 +198,11 @@ def fix_translation_batch(
         input=sys_prompt,
     )
 
+    logs = None
     if result.items:
-        print("------------ After Repair ---------------")
-        print(_build_items_to_fix(src_batch, trans_batch, issue_batch, result))
+        print(f"[attemps={attemps}, id={batch_id}] After Translation Repair")
+        logs = f"--------- [attemps={attemps}, id={batch_id}] After Translation Repair ---------------\n"
+        logs += _build_items_to_fix(src_batch, trans_batch, issue_batch, result)
 
     merged_batch = merge_batch(
         base=trans_batch,
@@ -211,4 +211,5 @@ def fix_translation_batch(
 
     return LessonGeneratorState(
         corrected_batches={ batch_id: merged_batch },
+        pending_logs=[logs] if logs else [],
     )

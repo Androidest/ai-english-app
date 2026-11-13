@@ -37,4 +37,6 @@ def merge_correction(
         remaining_attempts=remaining_attempts-1,
         issue_batches=Overwrite({}),
         corrected_batches=Overwrite({}),
+        pending_logs=Overwrite([]),
+        logs=state["logs"] + state["pending_logs"]
     )

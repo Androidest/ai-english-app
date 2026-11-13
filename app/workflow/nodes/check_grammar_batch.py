@@ -1,5 +1,6 @@
 from langgraph.runtime import Runtime
 from langgraph.types import Send
+from app.workflow.schema_handlers.commons import item_to_text
 
 from app.workflow.states.lesson_generator_state import LessonGeneratorState
 from app.workflow.states.parallel_batch_state import ParallelBatchState
@@ -70,6 +71,7 @@ def fanout_check_grammar_batch(
         for id in batch_ids
     ]
 
+
 def check_grammar_batch(
     state: ParallelBatchState,
     runtime: Runtime[BasicWorkflowContext],
@@ -83,10 +85,7 @@ def check_grammar_batch(
     language = state["main_state"]["issue_correction_request"].language
 
     uids_batch = set(item.uid for item in batch.items)
-    sentence_batch_txt = "\n".join([
-        item.model_dump_json(indent=0, ensure_ascii=False)
-        for item in batch.items
-    ])
+    sentence_batch_txt = item_to_text(batch)
 
     def verify_cb(o: IssueBatch):
 

@@ -1,7 +1,7 @@
 from langgraph.runtime import Runtime
+from app.workflow.schema_handlers.commons import item_to_text
 from langgraph.types import Send
 import warnings
-import json
 
 from app.workflow.states.lesson_generator_state import LessonGeneratorState
 from app.workflow.states.parallel_batch_state import ParallelBatchState
@@ -17,7 +17,7 @@ from app.workflow.schema_handlers.sentence_batch_handler import (
 )
 
 SYS_PROMPT_TEMPLATE = """You are an expert grammar corrector.
-Repair only the sentences listed below. Each sentence comes with a reason describing its grammar error.
+Repair only the sentences listed below (a batch of sentences). Each sentence comes with a reason describing its grammar error.
 
 Hard requirements:
 - Generate exactly one repaired sentence per UID.
@@ -87,28 +87,30 @@ def fanout_fix_grammar_batch(
 def _build_issue_text(
     batch: SentenceBatch, 
     issue_batch: IssueBatch,
+    output_batch: SentenceBatch = None,
 ) -> str:
 
     """
     Build the repair payload: only sentences with reported issues, each with its reason.
     """
 
-    reason_by_uid = {issue.uid: issue.reason for issue in issue_batch.issues}
-    items = [
-        json.dumps(
-            {
+    uid_issue_map = {issue.uid: issue.reason for issue in issue_batch.issues}
+    if output_batch:
+        uid_out_map = {item.uid: item.val for item in output_batch.items}
+
+    items = []
+    for item in batch.items:
+        if item.uid in uid_issue_map:
+            new_item = {
                 "uid": item.uid,
                 "val": normalize_text(item.val),
-                "reason": normalize_text(reason_by_uid[item.uid]),
-            }, 
-            indent=0, 
-            ensure_ascii=False
-        )
-        for item in batch.items
-        if item.uid in reason_by_uid
-    ]
-    text = "\n".join(items)
-    # print(text)
+                "reason": normalize_text(uid_issue_map[item.uid]),
+            }
+            if output_batch:
+                new_item["repaired"] = normalize_text(uid_out_map[item.uid])
+            items.append(new_item)
+                        
+    text = item_to_text(items)
     return text
 
 
@@ -123,8 +125,10 @@ def fix_grammar_batch(
     batch_id = state["batch_id"]
     batch = state["batch"]
     main_state = state["main_state"]
+    req = main_state["issue_correction_request"]
     issue_batch = main_state["issue_batches"][batch_id]
     language = main_state["issue_correction_request"].language
+    attemps = req.max_attempts - main_state["remaining_attempts"] + 1
 
     if len(issue_batch.issues) == 0:
         return LessonGeneratorState(corrected_batches={})
@@ -183,15 +187,18 @@ def fix_grammar_batch(
         input=sys_prompt,
     )
 
+    logs = None
+    if result.items:
+        print(f"[attemps={attemps}, id={batch_id}] After Grammar Repair")
+        logs = f"--------- [attemps={attemps}, id={batch_id}] After Grammar Repair ---------------\n"
+        logs += _build_issue_text(batch, issue_batch, result)
+
     merged_batch = merge_batch(
         base=batch,
         updates=result,
     )
 
-    # if result.items:
-    #     print("------------ After Repair ---------------")
-    #     print(result.model_dump_json(indent=2, ensure_ascii=False))
-
     return LessonGeneratorState(
         corrected_batches={ batch_id: merged_batch },
+        pending_logs=[logs] if logs else [],
     )
