@@ -138,6 +138,6 @@ def translate_src_batch(
         input=sys_prompt,
     )
 
-    return LessonGeneratorState(
-        pending_batches={ batch_id: result },
-    ) 
+    return {
+        "pending_batches": { batch_id: result },
+    }

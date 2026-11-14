@@ -17,10 +17,10 @@ def initialize_correction_request(
     req = state["issue_correction_request"]
     batches = state[req.target_batches_key]
 
-    return LessonGeneratorState(
-        processing_batch_ids=[ batch_id for batch_id in batches.keys() ],
-        remaining_attempts=req.max_attempts,
-        issue_batches=Overwrite({}),
-        corrected_batches=Overwrite({}),
-        pending_logs=Overwrite([]),
-    )
+    return {
+        "processing_batch_ids": [ batch_id for batch_id in batches.keys() ],
+        "remaining_attempts": req.max_attempts,
+        "issue_batches": Overwrite({}),
+        "corrected_batches": Overwrite({}),
+        "pending_logs": Overwrite([]),
+    }

@@ -131,6 +131,6 @@ def check_grammar_batch(
 
     issue_batches = { batch_id: result } if result.issues else {}
 
-    return LessonGeneratorState(
-        issue_batches=issue_batches,
-    )
+    return {
+        "issue_batches": issue_batches,
+    }

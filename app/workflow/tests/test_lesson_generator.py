@@ -28,7 +28,7 @@ async def test_lesson_generator():
 
         translation_languages=["Chinese"],
 
-        batch_size=10,
+        batch_size=5,
         max_concurrency=10,
     )
 

@@ -18,15 +18,15 @@ def batchify_plan_and_ids(
     diversity_plan = state["diversity_plan"]
     target_ids = state["target_ids"]
 
-    return LessonGeneratorState(
+    return {
 
-        target_ids_batches=[
+        "target_ids_batches": [
             set(target_ids[i : i+request.batch_size])
             for i in range(0, len(target_ids), request.batch_size)
         ],
         
-        diversity_plan_batches=batchify_plan(
+        "diversity_plan_batches": batchify_plan(
             diversity_plan=diversity_plan, 
             batch_size=request.batch_size,
         ),
-    )
+    }

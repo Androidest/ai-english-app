@@ -25,11 +25,11 @@ def initialize_request(state: LessonGeneratorState) -> LessonGeneratorState:
         for i in range(request.target_count)
     ]
 
-    return LessonGeneratorState(
-        target_ids=target_ids,
-        previous_sentences=[],
-        src_batches={},
-        translations_dict={},
-        pending_batches=Overwrite({}),
-        logs=[],
-    )
+    return {
+        "target_ids": target_ids,
+        "previous_sentences": [],
+        "src_batches": {},
+        "translations_dict": {},
+        "pending_batches": Overwrite({}),
+        "logs": [],
+    }

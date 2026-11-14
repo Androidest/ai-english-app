@@ -136,7 +136,7 @@ def gen_src_batch(
     )
 
     src_batches = { **src_batches, cur_batch_idx: result }
-    return LessonGeneratorState(
-        src_batches=src_batches,
-        previous_sentences=previous_sentences + [ item.val for item in result.items ]
-    )
+    return {
+        "src_batches": src_batches,
+        "previous_sentences": previous_sentences + [ item.val for item in result.items ]
+    }

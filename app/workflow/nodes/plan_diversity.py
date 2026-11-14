@@ -81,6 +81,6 @@ def plan_diversity(
         input=sys_prompt,
     )
 
-    return LessonGeneratorState(
-        diversity_plan=plan,
-    )
+    return {
+        "diversity_plan": plan,
+    }

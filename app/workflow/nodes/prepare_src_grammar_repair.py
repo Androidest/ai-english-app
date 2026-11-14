@@ -20,6 +20,6 @@ def prepare_src_grammar_repair(
         max_attempts=4,
     )
 
-    return LessonGeneratorState(
-        issue_correction_request=request
-    )
+    return {
+        "issue_correction_request": request
+    }

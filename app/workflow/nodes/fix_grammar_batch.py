@@ -131,7 +131,9 @@ def fix_grammar_batch(
     attemps = req.max_attempts - main_state["remaining_attempts"] + 1
 
     if len(issue_batch.issues) == 0:
-        return LessonGeneratorState(corrected_batches={})
+        return {
+            "corrected_batches":{}
+        }
 
     uids_batch = set(issue.uid for issue in issue_batch.issues)
     items_to_fix_txt = _build_issue_text(batch, issue_batch)
@@ -198,7 +200,7 @@ def fix_grammar_batch(
         updates=result,
     )
 
-    return LessonGeneratorState(
-        corrected_batches={ batch_id: merged_batch },
-        pending_logs=[logs] if logs else [],
-    )
+    return {
+        "corrected_batches": { batch_id: merged_batch },
+        "pending_logs": [logs] if logs else [],
+    }

@@ -41,6 +41,6 @@ def final_merge_by_uid(
 
         final_items.append(item)
 
-    return LessonGeneratorState(
-        final_items=final_items,
-    )
+    return {
+        "final_items": final_items,
+    }

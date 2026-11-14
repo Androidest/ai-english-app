@@ -26,6 +26,6 @@ def prepare_translation_repair(
         max_attempts=2,
     )
 
-    return LessonGeneratorState(
-        issue_correction_request=request
-    )
+    return {
+        "issue_correction_request": request
+    }

@@ -141,7 +141,9 @@ def fix_translation_batch(
     language = req.language
     
     if len(issue_batch.issues) == 0:
-        return LessonGeneratorState(corrected_batches={})
+        return {
+            "corrected_batches": {}
+        }
 
     uids_batch = set(issue.uid for issue in issue_batch.issues)
     items_to_fix_txt = _build_items_to_fix(src_batch, trans_batch, issue_batch)
@@ -209,7 +211,7 @@ def fix_translation_batch(
         updates=result,
     )
 
-    return LessonGeneratorState(
-        corrected_batches={ batch_id: merged_batch },
-        pending_logs=[logs] if logs else [],
-    )
+    return {
+        "corrected_batches": { batch_id: merged_batch },
+        "pending_logs": [logs] if logs else [],
+    }

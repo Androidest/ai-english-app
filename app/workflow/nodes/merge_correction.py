@@ -31,12 +31,12 @@ def merge_correction(
 
     remaining_recheck_ids = [ batch_id for batch_id in pending_results_batches.keys() ]
     
-    return LessonGeneratorState( 
-        **{ f"{req.target_batches_key}": batches },
-        processing_batch_ids=remaining_recheck_ids,
-        remaining_attempts=remaining_attempts-1,
-        issue_batches=Overwrite({}),
-        corrected_batches=Overwrite({}),
-        pending_logs=Overwrite([]),
-        logs=state["logs"] + state["pending_logs"]
-    )
+    return { 
+        f"{req.target_batches_key}": batches,
+        "processing_batch_ids": remaining_recheck_ids,
+        "remaining_attempts": remaining_attempts-1,
+        "issue_batches": Overwrite({}),
+        "corrected_batches": Overwrite({}),
+        "pending_logs": Overwrite([]),
+        "logs": state["logs"] + state["pending_logs"]
+    }
