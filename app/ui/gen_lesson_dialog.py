@@ -1,7 +1,13 @@
 import gradio as gr
-from app.ui.state_lessons import State_Lessons, FAV_LESSON
+
+from app.ui.state_lessons import State_Lessons, FAV_LESSON, Meta
 from app.ui.state_llms import State_LLMs
 from app.utils.paths import PATH_LESSONS
+from app.utils.types import Language, CEFRLevel
+from app.workflow.schemas.lesson_generation_request import LessonGenerationRequest
+from app.workflow.graphs.lesson_generator import LessonGenerator
+
+LANG_OPTIONS = ["--"] + list(Language.__args__)
 
 class GenLessonDialog:
     def __init__(self, state_lessons: State_Lessons, state_llms: State_LLMs):
@@ -19,31 +25,95 @@ class GenLessonDialog:
                 def render_items(llm_configs: list[dict], cur_llm: int):   
                     cur_llm_name = "-- Not Selected --"
                     if cur_llm != -1 and len(llm_configs) > cur_llm:
-                        cur_llm_name = llm_configs[cur_llm]["alias"]
+                        cur_llm_name = llm_configs[cur_llm].alias
                     gr.Textbox(cur_llm_name, elem_classes=["cur-ai"], max_lines=1, scale=1, container=False)
 
+                name = gr.Textbox (
+                    "", 
+                    label="Name", 
+                    placeholder="Lesson name", 
+                    scale=1, 
+                    interactive=True, 
+                    max_lines=1,
+                )
+
                 with gr.Row():
-                    name = gr.Textbox (
-                        "", 
-                        label="Name", 
-                        placeholder="Lesson name", 
+                    source_language = gr.Dropdown(
+                        label="Learning language", 
+                        choices=Language.__args__, 
+                        value=Language.__args__[0], 
                         scale=1, 
                         interactive=True, 
-                        max_lines=1
+                        min_width=80,
                     )
 
-                    pages = gr.Number(
-                        50, 
-                        label="Pages", 
-                        placeholder="Target page count", 
+                    difficulty = gr.Dropdown(
+                        label="Difficulty", 
+                        choices=CEFRLevel.__args__, 
+                        value=CEFRLevel.__args__[0], 
+                        scale=1, 
+                        interactive=True, 
+                        min_width=80,
+                    )
+
+                    source_max_len = gr.Number(
+                        100, 
+                        label="Max sentence length", 
                         precision=0,
                         scale=1, 
                         interactive=True, 
+                        min_width=80,
                     )
 
-                prompts = gr.TextArea (
+                    pages = gr.Number(
+                        10, 
+                        label="Pages", 
+                        precision=0,
+                        scale=1, 
+                        interactive=True, 
+                        min_width=80,
+                    )
+                
+                with gr.Row():
+                    display_language_1 = gr.Dropdown(
+                        label="Display language 1", 
+                        choices=LANG_OPTIONS, 
+                        value=LANG_OPTIONS[0], 
+                        scale=1, 
+                        interactive=True, 
+                        min_width=80
+                    )
+
+                    display_language_2 = gr.Dropdown(
+                        label="Display language 2", 
+                        choices=LANG_OPTIONS, 
+                        value=LANG_OPTIONS[0], 
+                        scale=1, 
+                        interactive=True, 
+                        min_width=80
+                    )
+
+                    batch_size = gr.Number(
+                        5, 
+                        label="Batch size", 
+                        precision=0,
+                        scale=1, 
+                        interactive=True, 
+                        min_width=80,
+                    )
+
+                    max_concurrency = gr.Number(
+                        20, 
+                        label="Max Concurrency", 
+                        precision=0,
+                        scale=1, 
+                        interactive=True, 
+                        min_width=80,
+                    )
+
+                topic = gr.TextArea (
                     "", 
-                    label="Prompts", 
+                    label="Topic", 
                     placeholder="Your requirements for creating this lesson.", 
                     scale=1, 
                     interactive=True
@@ -80,10 +150,24 @@ class GenLessonDialog:
                             state_llms.configs, 
                             state_llms.cur_llm, 
                             name, 
+
+                            source_language,
+                            source_max_len,
+                            topic,
+                            difficulty,
                             pages,
-                            prompts,
+                            display_language_1,
+                            display_language_2,
+                            batch_size,
+                            max_concurrency,
                         ],
-                        outputs=[state_lessons.metas, msg, self.panel],
+                        outputs=[
+                            state_lessons.metas, 
+                            msg, 
+                            self.panel,
+                            self.cancel_btn,
+                        ],
+                        show_progress="hidden",
                     )
 
                     self.cancel_btn.click(
@@ -103,20 +187,43 @@ class GenLessonDialog:
             outputs=[self.panel]
         )
 
-    def on_generate(
-            self, 
-            metas: dict[str, dict], 
-            llm_configs: list, 
-            cur_llm: str, 
-            name: str, 
-            pages: int,
-            prompts: str
-        ) -> dict[str, dict]:
+    async def on_generate(
+        self, 
+        metas: dict[str, Meta], 
+        llm_configs: list, #
+        cur_llm: str,  #
+        name: str, #
+
+        source_language: Language, #
+        source_max_len: int, #
+        topic: str, #
+        difficulty: CEFRLevel, #
+        pages: int, #
+        display_language_1 :Language, #
+        display_language_2 :Language, #
+        batch_size: int = 10, 
+        max_concurrency: int = 10,
+    ):
 
         ERROR_TEMPLATE = "<span style='color: #e39696; font-size: 16px;'>{msg}</span>"
 
+        display_languages = []
+        if display_language_1 in Language.__args__:
+            display_languages.append(display_language_1)
+
+        if display_language_2 in Language.__args__:
+            display_languages.append(display_language_2)
+
+        all_langs = [source_language] + display_languages
+
         error = ""
-        if name == "":
+        if len(all_langs) != len(set(all_langs)):
+            error = ERROR_TEMPLATE.format(msg="Source language and all the display languages must be distinct.<br>No duplicates are allowed.")
+
+        if llm_configs is None or cur_llm >= len(llm_configs) or cur_llm < 0:
+            error = ERROR_TEMPLATE.format(msg="AI is required!<br>Please add and chose one from the AI tab.")
+        
+        elif name == "":
             error = ERROR_TEMPLATE.format(msg="Name is required!")
 
         elif name.lower() == FAV_LESSON.lower():
@@ -125,11 +232,26 @@ class GenLessonDialog:
         elif (PATH_LESSONS / f"{name}.xlsx").exists():
             error = ERROR_TEMPLATE.format(msg=f"Lesson with the name '{name}' already exists.")
 
-        elif pages == None or pages <= 0:
+        elif source_max_len <= 0 or source_max_len == None:
+            error = ERROR_TEMPLATE.format(msg="Max sentence length should be a number bigger than 0.")
+
+        elif topic == "":
+            error = ERROR_TEMPLATE.format(msg="Topic is required!")
+
+        elif difficulty not in CEFRLevel.__args__:
+            error = ERROR_TEMPLATE.format(msg="Difficulty is required!")
+
+        elif pages <= 0 or pages == None:
             error = ERROR_TEMPLATE.format(msg="Pages should be a number bigger than 0.")
 
-        elif prompts == "":
-            error = ERROR_TEMPLATE.format(msg="Prompts is required!")
+        elif not display_languages:
+            error = ERROR_TEMPLATE.format(msg="At least one display language is required!")
+
+        elif batch_size <= 0 or batch_size == None:
+            error = ERROR_TEMPLATE.format(msg="Batch size should be a number bigger than 0.")
+
+        elif max_concurrency <= 0 or max_concurrency == None:
+            error = ERROR_TEMPLATE.format(msg="Max concurrency should be a number bigger than 0.")
 
         elif llm_configs is None or cur_llm >= len(llm_configs) or cur_llm < 0:
             error = ERROR_TEMPLATE.format(msg="AI is required!<br>Please add and chose one from the AI tab.")
@@ -137,17 +259,96 @@ class GenLessonDialog:
         if error == "":
             print(f"[Lesson Generator]")
             print(f"Lesson Name: {name}")
+            print(f"Source Language: {source_language}")
+            print(f"Source Max Len: {source_max_len}")
             print(f"Pages: {pages}")
-            print(f"Prompts: {prompts}")
+            print(f"Topic: {topic}")
+            print(f"Difficulty: {difficulty}")
+            print(f"Display Languages: {display_languages}")
             print(f"LLM: {cur_llm}", llm_configs[cur_llm])
             print("Start generating lesson...")
-            
-            sheet = self.state_lessons.generate_sheet(name, pages, prompts, llm_configs[cur_llm])
 
-            metas = metas.copy()
-            metas[name] = self.state_lessons.create_default_meta(name, sheet)
+            try:
+                request = LessonGenerationRequest(
+                    source_language = source_language,
+                    source_max_len = source_max_len,
+                    topic = topic,
+                    difficulty = difficulty,
+                    target_count = pages,
+                    translation_languages=display_languages,
+                    batch_size = batch_size,
+                    max_concurrency = max_concurrency,
+                )
 
-            self.state_lessons.save_sheet(sheet)
-            self.state_lessons.save_meta(metas[name], override_all=True)
+                cur_processed = 0
+                total = pages * (1 + len(display_languages)) + 1
+                workflow = LessonGenerator()
 
-        return metas, error, gr.update(visible=error!="")
+                yield self.build_on_generate_yields(-1)
+                async for data in workflow.astream(input=request, llm_config=llm_configs[cur_llm], user_id="TODO"):
+                    cur_processed += data["processed_count"]
+                    yield self.build_on_generate_yields(progress=cur_processed / total, metas=metas)
+
+                gen_data = workflow.last_state["final_items"]
+                if len(gen_data) != request.target_count:
+                    raise Exception("[AI Generation error]<br>The count of generated sentences does not match the page count.")
+                
+                sheet = self.state_lessons.build_sheet(
+                    lesson_name=name,
+                    data=gen_data, 
+                    display_languages_order=display_languages,
+                )
+                self.state_lessons.save_sheet(sheet)
+
+                new_meta = self.state_lessons.create_default_meta(name, sheet)
+                new_meta["source_language"] = source_language
+                new_meta["source_max_len"] = source_max_len
+                new_meta["topic"] = topic
+                new_meta["difficulty"] = difficulty
+                new_meta["pages"] = pages
+                new_meta["display_languages"] = display_languages
+                new_meta["batch_size"] = batch_size
+                new_meta["max_concurrency"] = max_concurrency
+                self.state_lessons.save_meta(new_meta, override_all=True)
+
+                metas = metas.copy()
+                metas[name] = new_meta
+
+            except Exception as e:
+                error = ERROR_TEMPLATE.format(msg=str(e))
+                raise e
+
+        yield self.build_on_generate_yields(progress=1, error=error, metas=metas)
+
+    def build_on_generate_yields(
+        self,
+        progress: int,
+        error: str = "",
+        metas: dict[str, Meta] = None,
+    ) -> tuple:
+
+        """
+        Build the returning data for `on_generate`
+        """
+
+        if progress == -1:
+            return (
+                gr.skip(), 
+                "", 
+                gr.skip(), 
+                gr.update(interactive=False),
+            )
+        elif progress >= 1:
+            return (
+                metas, 
+                error,
+                gr.update(visible=error!=""),
+                gr.update(interactive=True),
+            )
+        else:
+            return (
+                gr.skip(), 
+                f"{progress*100:.1f}%", 
+                gr.skip(),
+                gr.skip(),
+            )

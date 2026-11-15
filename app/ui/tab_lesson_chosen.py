@@ -1,7 +1,7 @@
 import gradio as gr
 from app.ui.confirm_dialog import ConfirmDialog
 from app.ui.state_llms import State_LLMs
-from app.ui.state_lessons import State_Lessons, FAV_LESSON
+from app.ui.state_lessons import State_Lessons, FAV_LESSON, Meta
 from app.utils.sheet import Sheet
 
 ERROR_TEMPLATE = "<span style='color: #e39696; font-size: 18px;'>{msg}</span>"
@@ -14,7 +14,7 @@ class Tab_Lesson_Chosen:
             state_lessons: State_Lessons, 
             state_llms: State_LLMs, 
             confirm_dialog: ConfirmDialog, 
-            metas:list[dict], 
+            metas:dict[str, Meta], 
             cur_lesson:str,
         ):
 
@@ -24,7 +24,7 @@ class Tab_Lesson_Chosen:
         s_cur_sheet = gr.State(value=state_lessons.load_sheet(cur_lesson))
         
         @gr.render(inputs=[s_cur_meta, s_cur_sheet])
-        def render_lesson_content(meta: dict, sheet: Sheet):
+        def render_lesson_content(meta: Meta, sheet: Sheet):
             total = max(meta["total"], 1)
             progress_idx = meta["progress_idx"]
             correct_percent = max(meta['correct_count'] / total * 100, 0)
@@ -85,17 +85,19 @@ class Tab_Lesson_Chosen:
             inputs = []
             with gr.Row():
                 with gr.Column(elem_classes=["lesson-content"]):
-                    en = sheet[progress_idx, "EN"]
-                    cn = sheet[progress_idx, "CN"]
-                    id = sheet[progress_idx, "ID"]
-                    
-                    gr.Markdown(f"{cn}", elem_classes=["phrase"], scale=0, min_width=10)
-                    gr.Markdown(f"{id}", elem_classes=["phrase"], scale=0, min_width=10)
+                    src = sheet[progress_idx, "SRC"]
+                    display_lang_1 = sheet[progress_idx, "DIS_1"]
+                    display_lang_2 = sheet[progress_idx, "DIS_2"]
+
+                    if type(display_lang_1) is str and display_lang_1 != "":
+                        gr.Markdown(f"{display_lang_1}", elem_classes=["phrase"], scale=0, min_width=10)
+                    if type(display_lang_2) is str and display_lang_2 != "":
+                        gr.Markdown(f"{display_lang_2}", elem_classes=["phrase"], scale=0, min_width=10)
 
                     words = []
                     all = []
-                    with gr.Row(elem_classes=["phrase-en"]) as row:
-                        for i, word in enumerate(en.split(' ')):
+                    with gr.Row(elem_classes=["phrase-src"]) as row:
+                        for i, word in enumerate(src.split(' ')):
                             word = word.strip()
                             punctuation = ""
 
@@ -195,7 +197,7 @@ class Tab_Lesson_Chosen:
                 outputs=[s_cur_meta, msg]
             )
 
-    def on_exit_lesson(self, lessons: dict, meta: dict, pending_update_meta:tuple) -> tuple:
+    def on_exit_lesson(self, lessons: dict, meta: Meta, pending_update_meta:tuple) -> tuple:
         # refresh lessons list with the updated meta
         new_lessons = lessons.copy() 
         new_lessons[meta["name"]] = meta
@@ -211,7 +213,7 @@ class Tab_Lesson_Chosen:
         
         return new_lessons, new_cur_lesson, () # cur_meta is empty when no lesson is selected, back to the lessons list
 
-    def on_delete_lesson(self, lessons: dict, meta: dict) -> tuple:
+    def on_delete_lesson(self, lessons: dict, meta: Meta) -> tuple:
             new_cur_lesson = "" # deselect the current lesson, back to the lessons list
             lesson_name = meta["name"]
             new_lessons = lessons.copy() 
@@ -223,17 +225,17 @@ class Tab_Lesson_Chosen:
     
             return new_lessons, new_cur_lesson
     
-    def on_click_prev(self, meta: dict, progress_idx: int):
+    def on_click_prev(self, meta: Meta, progress_idx: int):
         meta = self.state_lessons.update_progress(meta.copy(), progress_idx - 1)
         self.state_lessons.save_meta(meta)
         return meta
 
-    def on_click_next(self, meta: dict, progress_idx: int):
+    def on_click_next(self, meta: Meta, progress_idx: int):
         meta = self.state_lessons.update_progress(meta.copy(), progress_idx + 1)
         self.state_lessons.save_meta(meta)
         return meta
 
-    def on_click_submit(self, meta: dict, progress_idx: int, words: list[str], *inputs):
+    def on_click_submit(self, meta: Meta, progress_idx: int, words: list[str], *inputs):
         message = ""
         incorrect_count = 0
         case_incorrect_count = 0
@@ -269,7 +271,7 @@ class Tab_Lesson_Chosen:
 
         return meta, message
 
-    def on_click_favourite_origin(self, origin_meta: dict, progress_idx: int, sheet: Sheet, pendind_update_meta: tuple):
+    def on_click_favourite_origin(self, origin_meta: Meta, progress_idx: int, sheet: Sheet, pendind_update_meta: tuple):
         origin_meta = origin_meta.copy()
         if not self.state_lessons.is_phrase_favourite(origin_meta, progress_idx):
             self.state_lessons.save_favourite(
@@ -280,7 +282,7 @@ class Tab_Lesson_Chosen:
 
         else:
             self.state_lessons.delete_favourite(
-                en_key=sheet[progress_idx, "EN"],
+                en_key=sheet[progress_idx, "SRC"],
                 meta=origin_meta,
                 idx=progress_idx,
                 is_origin=True,
@@ -289,10 +291,10 @@ class Tab_Lesson_Chosen:
         pendind_update_meta = (*pendind_update_meta, FAV_LESSON)
         return origin_meta, pendind_update_meta
 
-    def on_delete_favourite(self, fav_meta: dict, progress_idx: int, fav_sheet: Sheet, pendind_update_meta: tuple):
+    def on_delete_favourite(self, fav_meta: Meta, progress_idx: int, fav_sheet: Sheet, pendind_update_meta: tuple):
         fav_meta = fav_meta.copy()
         fav_sheet, pending_origin = self.state_lessons.delete_favourite(
-            en_key=fav_sheet[progress_idx, "EN"],
+            en_key=fav_sheet[progress_idx, "SRC"],
             meta=fav_meta,
             idx=progress_idx,
             is_origin=False,
@@ -302,7 +304,7 @@ class Tab_Lesson_Chosen:
 
         return fav_meta, pendind_update_meta, fav_sheet, progress_idx
 
-    def on_click_restart(self, meta: dict):
+    def on_click_restart(self, meta: Meta):
         # if flag is IS_PASSED, then ignore it(delete it), 
         # else if the flags have other bits set, then just clear the IS_PASSED bit
         meta = meta.copy()

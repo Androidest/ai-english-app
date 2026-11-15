@@ -1,9 +1,11 @@
 from langgraph.runtime import Runtime
+from langgraph.config import get_stream_writer
 
 from app.workflow._core_.context import BasicWorkflowContext
 from app.workflow._core_.runnable import ConstrainedOutputWithRetry
 from app.workflow.schemas.sentence_batch import SentenceBatch
 from app.workflow.states.lesson_generator_state import LessonGeneratorState
+from app.workflow.states.stream_data import StreamData
 from app.workflow.schema_handlers.sentence_batch_handler import (
     validate_sentence_batch_uids, 
     validate_batch_sentence,
@@ -134,6 +136,12 @@ def gen_src_batch(
     result:SentenceBatch = llm.invoke(
         input=sys_prompt,
     )
+
+    writer = get_stream_writer()
+    writer(StreamData(
+        type="gen_src",
+        processed_count=len(result.items),
+    ))
 
     src_batches = { **src_batches, cur_batch_idx: result }
     return {

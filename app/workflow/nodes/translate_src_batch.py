@@ -1,13 +1,14 @@
 from langgraph.runtime import Runtime
+from langgraph.config import get_stream_writer
 from langgraph.types import Send
-from app.workflow.schema_handlers.commons import item_to_text
 
+from app.workflow.schema_handlers.commons import item_to_text
 from app.workflow._core_.context import BasicWorkflowContext
 from app.workflow._core_.runnable import ConstrainedOutputWithRetry
 from app.workflow.schemas.sentence_batch import SentenceBatch
 from app.workflow.states.lesson_generator_state import LessonGeneratorState
 from app.workflow.states.parallel_batch_state import ParallelBatchState
-from app.workflow.schema_handlers.commons import normalize_text
+from app.workflow.states.stream_data import StreamData
 from app.workflow.schema_handlers.sentence_batch_handler import (
     validate_sentence_batch_uids,
     validate_batch_sentence,
@@ -137,6 +138,12 @@ def translate_src_batch(
     result: SentenceBatch = llm.invoke(
         input=sys_prompt,
     )
+
+    writer = get_stream_writer()
+    writer(StreamData(
+        type=f"trans_{target_language}",
+        processed_count=len(result.items),
+    ))
 
     return {
         "pending_batches": { batch_id: result },

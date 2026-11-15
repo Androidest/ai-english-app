@@ -2,16 +2,20 @@ from abc import ABC, abstractmethod
 from typing import Any
 from pydantic import BaseModel
 from pathlib import Path
-
+from langgraph.graph.state import CompiledStateGraph
 from app.workflow._core_.llm_config import LLMConfig
 
 
 class WorkflowBase(ABC):
+    graph: CompiledStateGraph
+
     def __init__(self):
         self.graph = self._build_graph()
 
     @abstractmethod
-    def _build_graph(self):
+    def _build_graph(
+        self
+    ) -> CompiledStateGraph:
         raise NotImplementedError("_build_graph not implemented.")
 
     @abstractmethod

@@ -1,6 +1,6 @@
 import gradio as gr
 from app.ui.state_llms import State_LLMs
-from app.ui.state_lessons import State_Lessons, SORT_ALPHA_A_Z, SORT_ALPHA_Z_A, SORT_LATEST, SORT_OLDEST, FAV_LESSON
+from app.ui.state_lessons import State_Lessons, Meta, SORT_ALPHA_A_Z, SORT_ALPHA_Z_A, SORT_LATEST, SORT_OLDEST, FAV_LESSON
 from app.ui.gen_lesson_dialog import GenLessonDialog
 
 class Tab_Lesson_List:
@@ -93,7 +93,7 @@ class Tab_Lesson_List:
             self.state_lessons.save_cache({ "cur_sort_by": cur_sort_by })
             return cur_sort_by
 
-    def on_choose_lesson(self, meta: dict) -> tuple:
+    def on_choose_lesson(self, meta: Meta) -> tuple:
         lesson_name = meta["name"]
         print(f"Choose lesson: {lesson_name}")
         self.state_lessons.save_cache({ "cur_lesson": lesson_name })

@@ -1,6 +1,8 @@
 import gradio as gr
 from app.utils.paths import PATH_LESSONS
 from app.utils.sheet import Sheet
+from app.utils.types import Language, CEFRLevel
+from typing import TypedDict
 import json
 
 IS_FAVORITE = 0b01
@@ -16,15 +18,34 @@ FAV_LESSON = "Favourite"
 PATH_FAV_SHEET = PATH_LESSONS / f"{FAV_LESSON}.xlsx"
 PATH_FAV_META = PATH_LESSONS / f"{FAV_LESSON}.json"
 
+
+class Meta(TypedDict):
+    name: str
+    time_created: float
+    progress_idx: int = 0
+    phrases_flag: dict[str, int] = {} # key: page index, val: stores flags as bits. 
+    correct_count: int = 0
+    favourite_count: int = 0
+    total: int = 0
+
+    source_language: Language = "--"
+    source_max_len: int =  0
+    topic: str
+    difficulty: CEFRLevel = "--"
+    pages: int
+    display_languages: list[CEFRLevel] = []
+    batch_size: int
+    max_concurrency: int
+
 class State_Lessons:
     def __init__(self):
-        self.metas = gr.State(value={})
+        self.metas: dict[str, Meta] = gr.State(value={})
         self.cur_lesson = gr.State(value=None)
         self.sort_by = gr.State(value="")
         self.pending_uppdate_meta = gr.State(value=tuple())
     
     def load_to_outputs(self) -> tuple:
-        metas: dict = {} # lessons meta
+        metas: dict[str, Meta] = {} # lessons meta
         if PATH_LESSONS.exists():
             for file_path in PATH_LESSONS.rglob(f"*.xlsx"):
                 lesson_name = file_path.stem
@@ -79,24 +100,31 @@ class State_Lessons:
 
     # region sheet Management Functions
 
-    def generate_sheet(self, lesson_name: str, pages, prompts: str, llm_config: dict):
-        # TODO
-        sheet = Sheet(PATH_LESSONS / f"{lesson_name}.xlsx", default_data={'EN':[], 'CN':[], 'ID':[]}, dtype=str)
+    def build_sheet(
+        self, 
+        lesson_name: str, 
+        data: list[dict[str, str]],
+        display_languages_order: list[Language],
+    ):
+        lang_key_map = { display_languages_order[0]: "DIS_1" }
+        if len(display_languages_order) > 1:
+            lang_key_map[display_languages_order[1]] = "DIS_2"
+            
+        sheet = Sheet(PATH_LESSONS / f"{lesson_name}.xlsx", default_data={'SRC':[], 'DIS_1':[], 'DIS_2':[]}, dtype=str)
 
-        data = [
-            { "EN":"hello", "CN":"你好", "ID": "halo" },
-            { "EN":"Where the is a will, there is a way.", "CN":"有志者，事竟成", "ID": "Dimana ada kemauan, di situ ada jalan." },
-            { "EN":"Did you eat?", "CN":"你吃了吗？", "ID": "Apakah kamu sudah makan?" },
-        ]
-        for i, v in enumerate(data):
-            sheet[i] = v
+        for i, item in enumerate(data):
+            sheet[i] = {
+                lang_key_map.get(lang, "SRC"): sentence
+                for lang, sentence in item.items()
+            }
+
         return sheet
 
     def save_favourite(
             self, 
             val: dict, 
-            meta:dict, 
-            idx:int
+            meta: Meta, 
+            idx: int
         ):
 
         """
@@ -122,7 +150,7 @@ class State_Lessons:
 
         else:
             sheet = Sheet(PATH_FAV_SHEET)
-            fav_idx = self.find_phrase_idx(sheet, val["EN"])
+            fav_idx = self.find_phrase_idx(sheet, val["SRC"])
             if fav_idx == -1:
                 sheet.append(val)
 
@@ -136,7 +164,7 @@ class State_Lessons:
     def delete_favourite(
             self, 
             en_key: str,
-            meta:dict, 
+            meta:Meta, 
             idx:int,
             is_origin:bool,
         ):
@@ -210,8 +238,8 @@ class State_Lessons:
 
         return fav_sheet, pending_origin
 
-    def find_phrase_idx(self, sheet: Sheet, en: str):
-        mask = sheet.dataframe["EN"] == en
+    def find_phrase_idx(self, sheet: Sheet, src: str):
+        mask = sheet.dataframe["SRC"] == src
         positions = sheet.dataframe[mask].index.tolist()
         if len(positions) > 0:
             return positions[0]
@@ -240,17 +268,33 @@ class State_Lessons:
 
     # region Meta Management Functions
 
-    def create_default_meta(self, lesson_name: str, sheet: Sheet) -> dict:
-        meta = {
-            "name": lesson_name,
-            "time_created": sheet.time_created,
-            "progress_idx": 0, 
-            "phrases_flag": {},
-        }
+    def create_default_meta(self, lesson_name: str, sheet: Sheet) -> Meta:
+        meta = Meta(
+            name = lesson_name,
+            time_created = sheet.time_created,
+            progress_idx=0,
+            phrases_flag={},
+            correct_count=0,
+            favourite_count=0,
+            total=-1,
+
+            source_language='--',
+            source_max_len=0,
+            topic="--",
+            difficulty="--",
+            pages=-1,
+            display_languages=[],
+            batch_size=-1,
+            max_concurrency=-1,
+        )
         meta = self.make_brief_meta(meta, len(sheet))
         return meta
 
-    def save_meta(self, meta: dict, override_all: bool = False):
+    def save_meta(
+        self, meta: dict | Meta, 
+        override_all: bool = False
+    ) -> Meta:
+        
         if not PATH_LESSONS.exists():
             PATH_LESSONS.mkdir(parents=True, exist_ok=True)
 
@@ -270,7 +314,7 @@ class State_Lessons:
 
         return meta
 
-    def load_meta(self, lesson_name: str) -> dict:
+    def load_meta(self, lesson_name: str) -> Meta:
         meta_path = PATH_LESSONS / f"{lesson_name}.json"
         if meta_path.exists():
             with open(meta_path, "r", encoding="utf-8") as f:
@@ -286,7 +330,7 @@ class State_Lessons:
         if path.exists():
             path.unlink()
 
-    def make_brief_meta(self, meta: dict, total: int = None) -> dict:
+    def make_brief_meta(self, meta: Meta, total: int = None) -> Meta:
         if total is not None:
             meta["total"] = total
             self.update_progress(meta, meta["progress_idx"])
@@ -305,7 +349,7 @@ class State_Lessons:
 
         return meta
 
-    def update_progress(self, meta: dict, idx: int):
+    def update_progress(self, meta: Meta, idx: int) -> Meta:
         if idx < 0:
             idx = 0
         elif idx >= meta["total"]:
@@ -313,17 +357,17 @@ class State_Lessons:
         meta["progress_idx"] = idx
         return meta
 
-    def is_phrase_passed(self, meta: dict, idx: int) -> bool:
+    def is_phrase_passed(self, meta: Meta, idx: int) -> bool:
         return meta["phrases_flag"].get(str(idx), 0) & IS_PASSED == IS_PASSED
 
-    def is_phrase_favourite(self, meta: dict, idx: int) -> bool:
+    def is_phrase_favourite(self, meta: Meta, idx: int) -> bool:
         return meta["phrases_flag"].get(str(idx), 0) & IS_FAVORITE == IS_FAVORITE
 
-    def toggle_phrase_favorite(self, meta: dict, idx: int):
+    def toggle_phrase_favorite(self, meta: Meta, idx: int) -> Meta:
         meta["phrases_flag"][str(idx)] = meta["phrases_flag"].get(str(idx), 0) ^ IS_FAVORITE
         return meta
 
-    def set_favourite_phrase(self, meta: dict, idx: int, is_favourite: bool):
+    def set_favourite_phrase(self, meta: Meta, idx: int, is_favourite: bool) -> Meta:
         if is_favourite:
             meta["phrases_flag"][str(idx)] = meta["phrases_flag"].get(str(idx), 0) | IS_FAVORITE
         else:
@@ -332,14 +376,14 @@ class State_Lessons:
                 del meta["phrases_flag"][str(idx)]
         return meta
     
-    def set_pass_phrase(self, meta: dict, idx: int, is_correct: bool):
+    def set_pass_phrase(self, meta: Meta, idx: int, is_correct: bool) -> Meta:
         if is_correct:
             meta["phrases_flag"][str(idx)] = meta["phrases_flag"].get(str(idx), 0) | IS_PASSED
         else:
             meta["phrases_flag"][str(idx)] = meta["phrases_flag"].get(str(idx), 0) & ~IS_PASSED
         return meta
 
-    def reset_meta(self, meta: dict):
+    def reset_meta(self, meta: Meta) -> Meta:
         meta["phrases_flag"] = {
             idx: flag & ~IS_PASSED
             for idx, flag in meta["phrases_flag"].items() if flag != IS_PASSED

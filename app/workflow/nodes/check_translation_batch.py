@@ -1,8 +1,10 @@
 from langgraph.runtime import Runtime
 from langgraph.types import Send
-from app.workflow.schema_handlers.commons import item_to_text
+from langgraph.config import get_stream_writer
 
+from app.workflow.schema_handlers.commons import item_to_text
 from app.workflow.states.lesson_generator_state import LessonGeneratorState
+from app.workflow.states.stream_data import StreamData
 from app.workflow.states.parallel_batch_state import ParallelBatchState
 from app.workflow._core_.context import BasicWorkflowContext
 from app.workflow._core_.runnable import ConstrainedOutputWithRetry
@@ -177,8 +179,14 @@ def check_translation_batch(
         input=sys_prompt,
     )
 
-    issue_batches = { batch_id: result } if result.issues else {}
+    if not result.issues:
+        writer = get_stream_writer()
+        writer(StreamData(
+            type=f"pass_trans_{language}",
+            processed_count=len(src_batch.items),
+        ))
 
+    issue_batches = { batch_id: result } if result.issues else {}
     return {
         "issue_batches": issue_batches,
     }

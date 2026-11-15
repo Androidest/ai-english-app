@@ -68,7 +68,7 @@
 }
 
 .gen-dialog-panel {
-    min-width: 600px !important;
+    min-width: 800px !important;
 }
 
 .dialog-message {
@@ -337,7 +337,7 @@
     color: #452e6b !important;
 }
 
-.phrase-en {
+.phrase-src {
     width: 100%;
     display: flex;
     align-items: center;

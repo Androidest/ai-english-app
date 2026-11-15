@@ -8,24 +8,28 @@ import time
 class Tab_AI:
     state_llms: State_LLMs
 
-    def __init__(self, state_llms: State_LLMs, confirm_dialog: ConfirmDialog):
+    def __init__(
+        self, 
+        state_llms: State_LLMs, 
+        confirm_dialog: ConfirmDialog
+    ):
         self.state_llms = state_llms
 
         with gr.Tab("AIs") as tab_ai:
             # list of llms
             @gr.render(inputs=[state_llms.configs, state_llms.cur_llm])
-            def render_list(items: list[dict], cur_llm: int):
+            def render_list(items: list[LLMConfig], cur_llm: int):
                 # render all the llm config items
                 for idx, item in enumerate(items):
     
                     # data
-                    provider = item.get("model_provider", ProviderType.__args__[0])
-                    alias = item.get("alias", "")
-                    model = item.get("model", "")
-                    base_url = item.get("base_url", "")
-                    api_key = item.get("api_key", "")
-                    is_editing = item.get("editing", False)
-                    error = item.get("error", "")
+                    provider = item.model_provider
+                    alias = item.alias
+                    model = item.model
+                    base_url = item.base_url
+                    api_key = item.api_key
+                    is_editing = item.editing
+                    error = item.error
                     is_selected = idx == cur_llm
     
                     # css classes for item card and button panel
@@ -124,73 +128,114 @@ class Tab_AI:
                 add_btn = gr.Button("➕ Add", variant="secondary") 
                 add_btn.click(self.on_add, inputs=[state_llms.configs], outputs=[state_llms.configs])
                 
-    def on_click_edit(self, i, old_items):
-        new_items = [i.copy() for i in old_items]
-        new_items[i]["editing"] = True
+    def on_click_edit(
+        self, 
+        i: int, 
+        old_items: list[LLMConfig]
+    ) -> list[LLMConfig]:
+        
+        new_items = [i.model_copy() for i in old_items]
+        new_items[i].editing = True
         return new_items
 
-    def on_confirm_edit(self, i, provider_dd, alias_text, model_text, base_url_text, api_key_text, old_items):
-        # 复制旧列表，避免原地修改state
-        new_items = [i.copy() for i in old_items]
-        new_items[i]["model_provider"] = provider_dd
-        new_items[i]["alias"] = alias_text
-        new_items[i]["model"] = model_text
-        new_items[i]["base_url"] = base_url_text
-        new_items[i]["api_key"] = api_key_text 
+    def on_confirm_edit(
+        self, 
+        i: int, 
+        provider_dd: str, 
+        alias_text: str, 
+        model_text: str, 
+        base_url_text: str, 
+        api_key_text: str, 
+        old_items: list[LLMConfig]
+    ) -> list[LLMConfig]:
+        
+        new_items = [i.model_copy() for i in old_items]
+        new_items[i].model_provider = provider_dd
+        new_items[i].alias = alias_text
+        new_items[i].model = model_text
+        new_items[i].base_url = base_url_text
+        new_items[i].api_key = api_key_text 
 
-        if new_items[i]["alias"] == "":
-                new_items[i]["error"] = "Alias is required"
+        if new_items[i].alias == "":
+                new_items[i].error = "Alias is required"
                 return new_items
 
-        if new_items[i]["model"] == "":
-            new_items[i]["error"] = "Model is required"
+        if new_items[i].model == "":
+            new_items[i].error = "Model is required"
             return new_items
             
-        if new_items[i]["base_url"] == "":
-            new_items[i]["error"] = "Base URL is required"
+        if new_items[i].base_url == "":
+            new_items[i].error = "Base URL is required"
             return new_items
             
-        if new_items[i]["api_key"] == "":
-            new_items[i]["error"] = "API Key is required"
+        if new_items[i].api_key == "":
+            new_items[i].error = "API Key is required"
             return new_items
             
         # save the config to file with timestamp as id and filename
-        if "id" not in new_items[i] or new_items[i]["id"] == "":
-            new_items[i]["id"] = str(int(time.time())) 
+        if new_items[i].id == "":
+            new_items[i].id = str(int(time.time())) 
 
         self.state_llms.save_item(new_items[i])
 
-        new_items[i]["editing"] = False
-        new_items[i]["error"] = ""
+        new_items[i].editing = False
+        new_items[i].error = ""
         return new_items
 
-    def on_cancel_edit(self, i, old_items):
-        new_items = old_items.copy()
-        if 'id' not in new_items[i]:
+    def on_cancel_edit(
+        self, 
+        i: int, 
+        old_items: list[LLMConfig],
+    ) -> list[LLMConfig]:
+        
+        new_items = [i.model_copy() for i in old_items]
+        if new_items[i].is_new:
             # canceling a new added config without saving
             new_items.pop(i)
         else:
-            new_items[i]["editing"] = False
-            new_items[i]["error"] = ""
+            new_items[i].editing = False
+            new_items[i].error = ""
         return new_items
 
-    def on_delete(self, i, old_items):
+    def on_delete(
+        self, 
+        i: int, 
+        old_items: list[LLMConfig],
+    ) -> list[LLMConfig]:
+        
         self.state_llms.delete_item(old_items[i])
-        new_items = old_items.copy()
+        new_items = [i.model_copy() for i in old_items]
         new_items.pop(i)
         return new_items
 
-    def on_add(self, old_items):
-        item: dict = LLMConfig(model_provider=ProviderType.__args__[0], alias="", model="", base_url="", api_key="").model_dump()
-        item["editing"] = True
-        new_items = old_items.copy()
+    def on_add(
+        self, 
+        old_items: list[LLMConfig],
+    ) -> list[LLMConfig]:
+        
+        item = LLMConfig(
+            model_provider=ProviderType.__args__[0], 
+            alias="", 
+            model="", 
+            base_url="", 
+            api_key="",
+            editing=True,
+            is_new=True,
+        )
+        new_items = [i.model_copy() for i in old_items]
         new_items.append(item)
         return new_items
 
-    def on_click_item(self, i, items, old_cur_llm):
-        if items[i]["editing"]:
-            new_items = items.copy()
-            new_items[i]["error"] = "Cannot choose this LLM while editing"
+    def on_click_item(
+        self, 
+        i: int, 
+        items: list[LLMConfig], 
+        old_cur_llm: int
+    ) -> tuple[int, list[LLMConfig]]:
+        
+        if items[i].editing:
+            new_items = [i.model_copy() for i in items]
+            new_items[i].error = "Cannot choose this LLM while editing"
             return old_cur_llm, new_items
 
         self.state_llms.save_cur_llm(i)

@@ -86,13 +86,13 @@ if __name__ == "__main__":
     # read exsisting excel file
     data_sheet = Sheet(PATH_LESSONS / 'test.xlsx')
     print(data_sheet.column_names())
-    print(data_sheet[0, "EN"])
+    print(data_sheet[0, "SRC"])
     print(data_sheet[0])
     
     # create new excel file
-    data_sheet = Sheet(PATH_LESSONS / 'test1.xlsx', default_data={'EN':[], 'CN':[], 'ID':[]}, dtype=str)
-    data_sheet[0, "EN"] = "hello"
-    data_sheet[0, "CN"] = "你好"
-    data_sheet[0, "ID"] = "halo"
+    data_sheet = Sheet(PATH_LESSONS / 'test1.xlsx', default_data={'SRC':[], 'DIS_1':[], 'DIS_2':[]}, dtype=str)
+    data_sheet[0, "SRC"] = "hello"
+    data_sheet[0, "DIS_1"] = "你好"
+    data_sheet[0, "DIS_2"] = "halo"
     print(data_sheet[0])
     data_sheet.save()

@@ -17,6 +17,13 @@
             "request": "launch",
             "module": "app.workflow.tests.test_lesson_generator",
             "justMyCode": false,
+        },
+        {
+            "name": "Python Debugger: app.workflow.test_lesson_generator_stream",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "app.workflow.tests.test_lesson_generator_stream",
+            "justMyCode": false,
         }
     ]
 }

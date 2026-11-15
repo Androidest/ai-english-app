@@ -1,7 +1,7 @@
 import gradio as gr
 from app.ui.confirm_dialog import ConfirmDialog
 from app.ui.state_llms import State_LLMs
-from app.ui.state_lessons import State_Lessons
+from app.ui.state_lessons import State_Lessons, Meta
 from app.ui.tab_lesson_list import Tab_Lesson_List
 from app.ui.tab_lesson_chosen import Tab_Lesson_Chosen
 from app.ui.gen_lesson_dialog import GenLessonDialog
@@ -19,7 +19,7 @@ class Tab_Lesson:
         with gr.Tab("Lessons"):
 
             @gr.render(inputs=[state_lessons.metas, state_lessons.cur_lesson])
-            def render_tab(metas, cur_lesson: str):   
+            def render_tab(metas: Meta, cur_lesson: str):   
                 if cur_lesson == None:
                     return
 

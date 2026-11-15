@@ -20,21 +20,23 @@ def merge_correction(
     pending_results_batches = state["corrected_batches"]
     remaining_attempts = state["remaining_attempts"]
 
-    batches = {
-        batch_id: 
-            pending_results_batches[batch_id] # updates
-            if batch_id in pending_results_batches else # If this batch needs to be updated
-            batch # remains the same
-        
-        for batch_id, batch in batches.items()
-    }
+    updated_batches = {}
+    remaining_recheck_ids = []
+    for batch_id, batch in batches.items():
+        if batch_id in pending_results_batches:
+            # If this batch needs to be updated
+            updated_batches[batch_id] = pending_results_batches[batch_id] 
+            remaining_recheck_ids.append(batch_id)
+        else:
+            # remains the same
+            updated_batches[batch_id] = batch
 
-    remaining_recheck_ids = [ batch_id for batch_id in pending_results_batches.keys() ]
-    
+    remaining_attempts -= 1
+
     return { 
-        f"{req.target_batches_key}": batches,
+        f"{req.target_batches_key}": updated_batches,
         "processing_batch_ids": remaining_recheck_ids,
-        "remaining_attempts": remaining_attempts-1,
+        "remaining_attempts": remaining_attempts,
         "issue_batches": Overwrite({}),
         "corrected_batches": Overwrite({}),
         "pending_logs": Overwrite([]),

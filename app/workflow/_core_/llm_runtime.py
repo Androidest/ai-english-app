@@ -28,7 +28,7 @@ class LLMRuntime:
         if temperature is not None:
             overrides["temperature"] = temperature
             
-        model_kargs = dict(self.config.__dict__)
+        model_kargs = self.config.model_dump()
         model_kargs.update(overrides)
         del model_kargs['alias']
 

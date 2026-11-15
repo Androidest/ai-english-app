@@ -25,7 +25,7 @@ with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for
             def render_ai(llm_configs: list[dict], cur_llm: int):
                 cur_llm_name = "-- Not Selected --"
                 if cur_llm != -1 and len(llm_configs) > cur_llm:
-                    cur_llm_name = llm_configs[cur_llm]["alias"]
+                    cur_llm_name = llm_configs[cur_llm].alias
                 gr.Textbox(cur_llm_name, elem_classes=["cur-ai"], max_lines=1, scale=0, min_width=200, container=False)
 
     with gr.Row():

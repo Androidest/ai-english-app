@@ -11,20 +11,17 @@ class State_LLMs:
         self.configs = gr.State(value=[])
         self.cur_llm = gr.State(value=-1)        
 
-    def load_to_outputs(self) -> tuple[list[dict], int]:
-        configs: list[dict] = []
+    def load_to_outputs(self) -> tuple[list[LLMConfig], int]:
+        configs: list[LLMConfig] = []
 
         if PATH_LLMS.exists():
             for file_path in PATH_LLMS.rglob(f"*.json"):
                 with open(file_path, "r", encoding="utf-8") as f:
                     config = LLMConfig.model_validate_json(f.read())
-                    config_dict = config.model_dump()
-                    config_dict["editing"] = False
-                    config_dict["error"] = ""
-                    config_dict["id"] = file_path.stem
-                    configs.append(config_dict)
+                    config.id = file_path.stem
+                    configs.append(config)
 
-            sorted(configs, key=lambda x: x["id"])
+            sorted(configs, key=lambda x: x.id)
 
         if PATH_CUR_LLM.exists():
             with open(PATH_CUR_LLM, "r", encoding="utf-8") as f:
@@ -37,23 +34,39 @@ class State_LLMs:
 
         return configs, cur_llm
 
-    def outputs(self):
-        return [self.configs, self.cur_llm]
+    def outputs(self) -> tuple[gr.State, gr.State]:
+        return [
+            self.configs, 
+            self.cur_llm
+        ]
     
-    def save_item(self, item: dict):
+    def save_item(
+        self,
+        config: LLMConfig
+    ):
         if not PATH_LLMS.exists():
             PATH_LLMS.mkdir(parents=True, exist_ok=True)
 
-        with open(f"{PATH_LLMS}/{item['id']}.json", "w", encoding="utf-8") as f:
-            config = LLMConfig.model_validate(item)
-            f.write(json.dumps(config.model_dump(), ensure_ascii=False, indent=4))
+        with open(f"{PATH_LLMS}/{config.id}.json", "w", encoding="utf-8") as f:
+            json.dump(
+                config.model_dump(), 
+                f, 
+                ensure_ascii=False, 
+                indent=4
+            )
 
-    def save_cur_llm(self, cur_llm: int):
+    def save_cur_llm(
+        self, 
+        cur_llm: int
+    ):
         with open(PATH_CUR_LLM, "w", encoding="utf-8") as f:
             f.write(str(cur_llm))
 
-    def delete_item(self, item: dict):
-        path = PATH_LLMS / f"{item['id']}.json"
+    def delete_item(
+        self, 
+        config: LLMConfig
+    ):
+        path = PATH_LLMS / f"{config.id}.json"
         if path.exists():
             path.unlink()
      

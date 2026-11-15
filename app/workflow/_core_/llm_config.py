@@ -1,16 +1,21 @@
-from pydantic import BaseModel
+from typing import TypedDict, NotRequired
 import json
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.utils.paths import PATH_LLMS
 from app.utils.types import ProviderType
 
 class LLMConfig(BaseModel):
-    alias: str
-    model_provider: ProviderType
-    model: str
-    base_url: str
-    api_key: str
+    alias: str = Field(default="")
+    model_provider: ProviderType = Field(default=ProviderType.__args__[0])
+    model: str = Field(default="")
+    base_url: str = Field(default="")
+    api_key: str = Field(default="")
+
+    editing: bool = Field(default=False, exclude=True)
+    error: str = Field(default="", exclude=True)
+    id: str = Field(default="", exclude=True)
+    is_new: bool = Field(default=False, exclude=True)
 
 if __name__ == "__main__":
     test_file_path = PATH_LLMS/"test.json"
@@ -18,10 +23,11 @@ if __name__ == "__main__":
     if not test_file_path.exists():
         test = LLMConfig(
             alias="test",
-            model_provider="",
+            model_provider="deepseek",
             model="deepseek",
             base_url="https://api.deepseek.cn/v1",
             api_key="sk-xxxx",
+            editing=True
         )
 
         with open(test_file_path, "w", encoding="utf-8") as f:

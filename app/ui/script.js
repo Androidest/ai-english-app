@@ -100,7 +100,7 @@ function enableWordNavigation() {
             return;
         }
 
-        const container = input.closest(".phrase-en");
+        const container = input.closest(".phrase-src");
 
         if (!container) {
             return;
