@@ -13,7 +13,6 @@ from app.workflow.schema_handlers.commons import normalize_text
 from app.workflow.schema_handlers.sentence_batch_handler import (
     validate_sentence_batch_uids,
     validate_batch_sentence,
-    merge_batch,
 )
 
 SYS_PROMPT_TEMPLATE = """You are an expert grammar and translation corrector.
@@ -67,8 +66,7 @@ def fanout_fix_translation_batch(
             The language of the sentences of the supplied batches.
     """
 
-    req = state["issue_correction_request"]
-    batches = state[req.target_batches_key]
+    batches = state["processing_batches"]
     batch_ids = state["issue_batches"].keys()
 
     return [
@@ -156,7 +154,7 @@ def fix_translation_batch(
         ok, reason = validate_sentence_batch_uids(
             expected_uids=uids_batch,
             actual_batch=o,
-            check_missing=False,
+            check_missing=True,
         )
 
         if not ok:
@@ -206,12 +204,7 @@ def fix_translation_batch(
         logs = f"--------- [attemps={attemps}, id={batch_id}] After Translation Repair ---------------\n"
         logs += _build_items_to_fix(src_batch, trans_batch, issue_batch, result)
 
-    merged_batch = merge_batch(
-        base=trans_batch,
-        updates=result,
-    )
-
     return {
-        "corrected_batches": { batch_id: merged_batch },
+        "corrected_batches": { batch_id: result },
         "pending_logs": [logs] if logs else [],
     }

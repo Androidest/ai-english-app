@@ -15,7 +15,7 @@ from app.workflow.nodes.merge_correction import merge_correction
 RECURSION_LIMIT = 200
 
 def warn_insufficient_attempts(state: LessonGeneratorState, info:str):
-    if len(state["processing_batch_ids"]) > 0 and state["remaining_attempts"] == 0:
+    if len(state["processing_batches"]) > 0 and state["remaining_attempts"] == 0:
         warnings.warn(f"[Insufficient Attepmts] {info}")
 
 class GrammarCorrector_Subgraph(WorkflowBase):
@@ -53,7 +53,7 @@ class GrammarCorrector_Subgraph(WorkflowBase):
 
         # Check
         def check_or_end(state: LessonGeneratorState):
-            if len(state["processing_batch_ids"]) > 0 and state["remaining_attempts"] > 0:
+            if len(state["processing_batches"]) > 0 and state["remaining_attempts"] > 0:
                 return fanout_check_grammar_batch(CHECK_GRAMMAR_BATCH, state)
             else:
                 warn_insufficient_attempts(state, f"GrammarCorrector_Subgraph(name={self.name})")
@@ -66,7 +66,7 @@ class GrammarCorrector_Subgraph(WorkflowBase):
 
         # Fix
         def fix_or_end(state: LessonGeneratorState):
-            if len(state["processing_batch_ids"]) > 0:
+            if len(state["processing_batches"]) > 0:
                 return fanout_fix_grammar_batch(FIX_GRAMMAR_BATCH, state)
             else:
                 return END

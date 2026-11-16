@@ -39,7 +39,7 @@ class LessonGeneratorState(TypedDict, total=False):
     # This request need to be assigned before the subgrpah starts processing. 
     issue_correction_request: IssueCorrectionRequest
     # Marks which batches are in process. It will decrease if some of the batches finish processing.
-    processing_batch_ids: list[str]
+    processing_batches: dict[str, SentenceBatch]
     remaining_attempts: int
     # Temporally batches: They gather the results from fanned-out multi-parallel nodes after they fan in.
     issue_batches: Annotated[dict[str, IssueBatch], merge_batches] # Use 'Annotated' to add a reducer to it for parallel update.

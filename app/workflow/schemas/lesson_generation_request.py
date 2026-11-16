@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 
 from app.utils.types import CEFRLevel, Language
 
-SOURCE_MAX_LENGTH_TOLERANCE = 20
+SOURCE_MAX_LENGTH_TOLERANCE = 25
 
 class LessonGenerationRequest(BaseModel):
     """Public input of the multilingual lesson generation workflow."""

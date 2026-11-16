@@ -15,7 +15,7 @@ from app.workflow.nodes.merge_correction import merge_correction
 RECURSION_LIMIT = 200
 
 def warn_insufficient_attempts(state: LessonGeneratorState):
-    if len(state["processing_batch_ids"]) > 0 and state["remaining_attempts"] == 0:
+    if len(state["processing_batches"]) > 0 and state["remaining_attempts"] == 0:
         warnings.warn(f"[Insufficient Attepmts] TranslationCorrection_Subgraph")
 
 class TranslationCorrection_Subgraph(WorkflowBase):
@@ -49,7 +49,7 @@ class TranslationCorrection_Subgraph(WorkflowBase):
 
         # Check
         def check_or_end(state: LessonGeneratorState):
-            if len(state["processing_batch_ids"]) > 0 and state["remaining_attempts"] > 0:
+            if len(state["processing_batches"]) > 0 and state["remaining_attempts"] > 0:
                 return fanout_check_translation_batch(CHECK_TRANSLATION_BATCH, state)
             else:
                 warn_insufficient_attempts(state)
@@ -62,7 +62,7 @@ class TranslationCorrection_Subgraph(WorkflowBase):
 
         # Fix
         def fix_or_end(state: LessonGeneratorState):
-            if len(state["processing_batch_ids"]) > 0:
+            if len(state["processing_batches"]) > 0:
                 return fanout_fix_translation_batch(FIX_TRANSLATION_BATCH, state)
             else:
                 return END

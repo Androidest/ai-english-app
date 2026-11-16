@@ -76,21 +76,16 @@ def fanout_check_translation_batch(
         language:
             The language of the sentences of the supplied batches.
     """
-
-    req = state["issue_correction_request"]
-    batches = state[req.target_batches_key]
-    batch_ids = state['processing_batch_ids']
-
     return [
         Send(
             node=node,
             arg=ParallelBatchState(
                 batch_id=id,
-                batch=batches[id],
+                batch=batch,
                 main_state=state,
             )  # local state
         )
-        for id in batch_ids
+        for id, batch in state['processing_batches'].items()
     ]
 
 
@@ -186,7 +181,9 @@ def check_translation_batch(
             processed_count=len(src_batch.items),
         ))
 
-    issue_batches = { batch_id: result } if result.issues else {}
-    return {
-        "issue_batches": issue_batches,
-    }
+    if result.issues:
+        return {
+            "issue_batches": { batch_id: result },
+        }
+    else:
+        return {}
