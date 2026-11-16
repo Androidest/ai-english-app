@@ -167,8 +167,8 @@ def fix_grammar_batch(
 
         ok, reason = validate_batch_sentence(
             batch=o,
-            max_len=999,
-            prompt_max_len=999,
+            max_len=req.max_len,
+            prompt_max_len=req.max_len_for_prompts,
         )
 
     llm = runtime.context.llm_runtime.get_model(

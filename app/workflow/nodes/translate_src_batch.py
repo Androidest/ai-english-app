@@ -42,6 +42,10 @@ Hard requirements:
     9. Tone
     10. Causal relationship
     11. Wording style
+- For culture-specific items (food, dishes, places, institutions, festivals, measures, titles, brands):
+    1. Replace a non-established literal calque with the commonly accepted rendering in the target language if one exists; 
+    2. If none exists, use a transliteration in the target language's script, optionally with a brief category word. 
+    3. Do not substitute one established variant for another; 
 
 Target translation language:
 {target_language}

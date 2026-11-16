@@ -15,3 +15,6 @@ class IssueCorrectionRequest(BaseModel):
     # Max correction attempts
     max_attempts: int = 2
     source_language: Language | None = None
+
+    max_len: int | None = None
+    max_len_for_prompts: int | None = None

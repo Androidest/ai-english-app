@@ -53,6 +53,11 @@ Hard requirements:
 - Check the following only when it causes misleading register mismatch:
     1. Tone
     2. Wording style
+- For culture-specific items (food, dishes, places, institutions, festivals, measures, titles, brands), flag when: 
+    1. the translation uses a non-established literal calque where the target language has a commonly accepted rendering; 
+    2. the item is left in the source language though the target language has an established term; 
+    3. a transliteration is used where an established rendering exists, or an established rendering is replaced by an obscure literal one. Do not flag when the chosen rendering is a recognized common usage in the target language, even if another valid variant exists. This applies to all language pairs.
+
 
 Source Language:
 {src_language}

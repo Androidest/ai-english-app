@@ -42,9 +42,14 @@ Hard requirements:
 - Do not add information that does not exist in the source.
 - Do not copy directly from the source sentence. Returning the current translation unchanged is allowed only under the skip condition above.
 - Preserve all of the following from the source:
-  1. Numbers and quantities
-  2. Dates and times
-  3. Names and named entities
+    1. Numbers and quantities
+    2. Dates and times
+    3. Names and named entities
+- For culture-specific items (food, dishes, places, institutions, festivals, measures, titles, brands):
+    1. Replace a non-established literal calque with the commonly accepted rendering in the target language if one exists; 
+    2. If none exists, use a transliteration in the target language's script, optionally with a brief category word. 
+    3. Do not substitute one established variant for another; 
+    4. Only fix when the current rendering is unrecognized, misleading, or a literal calque.
 
 Source Language:
 {src_language}

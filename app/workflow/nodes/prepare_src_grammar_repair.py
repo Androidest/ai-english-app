@@ -18,6 +18,9 @@ def prepare_src_grammar_repair(
         language=state["request"].source_language,
         target_batches_key="src_batches",
         max_attempts=4,
+
+        max_len=state["request"].source_max_len,
+        max_len_for_prompts=state["request"].get_src_max_len_for_prompt(),
     )
 
     return {
