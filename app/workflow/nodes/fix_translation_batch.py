@@ -16,18 +16,35 @@ from app.workflow.schema_handlers.sentence_batch_handler import (
 )
 
 SYS_PROMPT_TEMPLATE = """You are an expert grammar and translation corrector.
-Each supplied entry includes a source-translation pair and a repair reason describing the grammar and translation (alignment) issues in the translated sentence.
-Repair only the translated sentences listed below according to their respective repair reasons.
+Each entry includes a UID, source sentence, current translation, repair reason, and optional previous_trans.
+Repair only substantive defects identified by the repair reason.
+
+Input fields per entry:
+- uid: the key.
+- source: the source sentence.
+- trans: the current translation (output of the previous repair round, or the original translation on the first round).
+- reason: the defect reported for `trans`.
+- previous_trans (optional): the original translation or the translation produced by the PREVIOUS repair round for this same uid. Absent on the first round.
+
+How to use previous_trans:
+- If previous_trans is absent: treat `trans` as the original translation and repair normally.
+- If `reason` describes a DIFFERENT substantive defect not addressed by the previous change, repair it.
+- If `reason` is a synonym/style/elegance preference, or asks to revert/contradict the direction of the previous translation (oscillation, e.g. "use A" then "use B" then "use A"), return `trans` UNCHANGED as the current repaired translation for that UID.
+- If `reason` restates the SAME defect that previous_trans already attempted to fix and the current text is a reasonable faithful rendering, return `trans` UNCHANGED as the current repaired translation for that UID.
 
 Hard requirements:
-- Generate exactly one repaired translated sentence per UID.
+- Generate exactly one output sentence per UID.
 - Treat the UIDs as keys; preserve them exactly as supplied. Never create, delete, rename, or modify a UID.
 - Output only structured repaired data. Do not add extra explanations, commentary, or preamble.
-- Fix only the grammar and translation issue described in the repair reason for each translated sentence. Do not make unrelated changes.
-- Do not directly copy the supplied sentences. Modification is required for all the translated sentences; 
-- Do not repair or output the source sentences. Only the translation is modified.
+- Fix only the substantive defect described in the repair reason. Do not make unrelated style, synonym, or elegance changes.
+- Do not repair or output the source sentences. Only the translation may be modified.
 - Do not omit meaningful information from the source.
 - Do not add information that does not exist in the source.
+- Do not copy directly from the source sentence. Returning the current translation unchanged is allowed only under the skip condition above.
+- Preserve all of the following from the source:
+  1. Numbers and quantities
+  2. Dates and times
+  3. Names and named entities
 
 Source Language:
 {src_language}
@@ -35,18 +52,10 @@ Source Language:
 Translation language:
 {language}
 
-Translated sentences to repair (with repair reasons and source sentences):
+Items to repair:
 {items_to_fix}
 
-Now, Output the updated (repaired) translations.
-"""
-
-
-COPY_ERROR_TEMPLATE = """The following uids were returned with text identical to the original translation:
-{uids}
-
-You should fix the issues for these uids according to their reasons.
-These translation should be modified, not copied.
+Now output the updated translations.
 """
 
 
@@ -86,6 +95,7 @@ def _build_items_to_fix(
     src_batch: SentenceBatch, 
     trans_batch: SentenceBatch,
     issue_batch: IssueBatch,
+    previous_trans_batch: dict[str, str],
     output_batch: SentenceBatch = None, # for testing
 ) -> str:
 
@@ -109,6 +119,10 @@ def _build_items_to_fix(
                 "trans": normalize_text(uid_trans_map[item.uid]),
                 "reason": normalize_text(uid_issue_map[item.uid]),
             }
+
+            if previous_trans_batch:
+                new_item["previous_trans"] = normalize_text(previous_trans_batch[item.uid]),
+            
             if output_batch:
                 new_item["repaired"] = normalize_text(uid_out_map[item.uid])
 
@@ -134,6 +148,11 @@ def fix_translation_batch(
     src_batch = main_state["src_batches"][batch_id]
     trans_batch = state["batch"]
     issue_batch = main_state["issue_batches"][batch_id]
+    pre_corrected_batches = main_state["pre_corrected_batches"]
+    previous_trans_batch = None
+
+    if len(pre_corrected_batches) > 0:
+        previous_trans_batch = pre_corrected_batches[batch_id]
 
     source_language = req.source_language
     language = req.language
@@ -144,7 +163,7 @@ def fix_translation_batch(
         }
 
     uids_batch = set(issue.uid for issue in issue_batch.issues)
-    items_to_fix_txt = _build_items_to_fix(src_batch, trans_batch, issue_batch)
+    items_to_fix_txt = _build_items_to_fix(src_batch, trans_batch, issue_batch, previous_trans_batch)
 
     def verify_cb(o: SentenceBatch):
 
@@ -165,16 +184,6 @@ def fix_translation_batch(
             max_len=999,
             prompt_max_len=999,
         )
-
-        error_uids = []
-        sent_by_id = { item.uid: item.val for item in o.items }
-        for item in trans_batch.items:
-            if item.uid in sent_by_id and sent_by_id[item.uid] == item.val:
-                error_uids.append(f'- uid="{item.uid}"')
-
-        if error_uids:
-            warnings.warn(f"[fix_translation_batch] Repeating sentences: {[ item.uid for item in o.items ]}")
-            raise Exception(COPY_ERROR_TEMPLATE.format(uids="\n".join(error_uids)))
 
     llm = runtime.context.llm_runtime.get_model(
         temperature=0.3, # recommended temperature for grammar repair
@@ -199,12 +208,20 @@ def fix_translation_batch(
     )
 
     logs = None
-    if result.items:
-        print(f"[attemps={attemps}, id={batch_id}] After Translation Repair")
-        logs = f"--------- [attemps={attemps}, id={batch_id}] After Translation Repair ---------------\n"
-        logs += _build_items_to_fix(src_batch, trans_batch, issue_batch, result)
+    print(f"[attemps={attemps}, id={batch_id}] After Translation Repair")
+    logs = f"--------- [attemps={attemps}, id={batch_id}] After Translation Repair ---------------\n"
+    logs += _build_items_to_fix(src_batch, trans_batch, issue_batch, previous_trans_batch, result)
+
+    # Filter:
+    # Exclude repaired translations that remain unchanged. (Means removing them from the recheck pool)
+    prev_trans_map = { item.uid: item.val for item in trans_batch.items }
+    result.items = [
+        new_trans
+        for new_trans in result.items
+        if prev_trans_map[new_trans.uid] != new_trans.val # preseve the updated ones only
+    ]
 
     return {
-        "corrected_batches": { batch_id: result },
+        "corrected_batches": { batch_id: result } if result.items else {},
         "pending_logs": [logs] if logs else [],
     }

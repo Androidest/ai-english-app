@@ -23,7 +23,7 @@ def prepare_translation_repair(
         source_language=source_language,
         language=cur_language,
         target_batches_key="translated_batches",
-        max_attempts=2,
+        max_attempts=3,
     )
 
     return {

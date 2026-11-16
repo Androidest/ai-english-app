@@ -22,5 +22,6 @@ def initialize_correction_request(
         "remaining_attempts": req.max_attempts,
         "issue_batches": Overwrite({}),
         "corrected_batches": Overwrite({}),
+        "pre_corrected_batches": {},
         "pending_logs": Overwrite([]),
     }

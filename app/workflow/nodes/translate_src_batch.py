@@ -16,18 +16,20 @@ from app.workflow.schema_handlers.sentence_batch_handler import (
 
 
 SYS_PROMPT_TEMPLATE = """You are an expert content translator.
-"Translate every supplied source sentence into the supplied target language."
+Translate every supplied source sentence into the supplied target language.
 
 Hard requirements:
 - Generate exactly one translated sentence per UID.
 - Treat the UIDs as keys; preserve them exactly as supplied. Never create, delete, rename, or modify a UID.
 - Output only structured translation data. Do not add extra explanations, commentary, or preamble.
 - Do not make duplicate sentences.
-- Do not copy directly from the supplied sentences. 
+- Do not copy directly from the supplied sentences.
 - Do not omit meaningful information from the source in the translation.
 - Do not add information to the translation that is not present in the source.
 - The translation should not deviate from the original intent.
 - The translation shall take the logic and expression of the source sentence as its baseline and render faithfully, even if the source contains errors.
+- Prefer a faithful, literal rendering over stylistic variation. Do not introduce synonyms, rephrase for elegance, or add/remove surface details unless a literal rendering is unintelligible in the target language.
+- If a minimal adjustment is needed for grammaticality, keep it minimal and preserve the source's surface meaning.
 - Each translation shall preserve all of the following with its source sentence:
     1. Semantic intent
     2. The original meaning
@@ -42,7 +44,7 @@ Hard requirements:
     11. Wording style
 
 Target translation language:
-{target_language}    
+{target_language}
 
 Source language:
 {src_language}
@@ -118,7 +120,7 @@ def translate_src_batch(
             raise Exception(reason)
 
     llm = runtime.context.llm_runtime.get_model(
-        temperature=0.3,
+        temperature=0.1,
     )
 
     llm = ConstrainedOutputWithRetry(

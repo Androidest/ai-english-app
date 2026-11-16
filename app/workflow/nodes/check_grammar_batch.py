@@ -15,23 +15,44 @@ from app.workflow.schema_handlers.issue_batch_handler import (
 )
 
 SYS_PROMPT_TEMPLATE = """You are an expert content grammar checker.
-Identify only the sentences with grammar errors. Do NOT repair them.
+Report only substantive grammar defects. Do NOT repair them.
 
 Hard requirements:
-- Return only the issue entries for problematic sentences.
-- Each issue must include its UID and a short reason describing the grammatical error.
-- Each reason description should be in one line. DO NOT SPLIT them into multiple lines.
-- Each reasons shall be compact and precise.
-- Treat the UIDs as keys; preserve them exactly as supplied. Never create, delete, rename, or modify a UID.
+- Report an issue only when substantive defects are identified. Classify each one honestly.
+- Report only defects in: 
+    1. grammar
+    2. syntax
+    3. word order
+    4. agreement
+    5. tense consistency
+    6. articles/prepositions
+    7. collocations
+    8. punctuation
+    9. phrasing that is unnatural or non-idiomatic to native speakers
+    10. fluency
+- Each issue must include uid, reason, severity and confidence.
+- Treat UIDs as keys; preserve them exactly as supplied. Never create, delete, rename, or modify a UID.
+- reason:
+    1. Must be a single line;
+    2. Must be written in the target language;
+    3. Describe the defect only;
+    4. State the defect precisely;
+- severity must be one of the following: 
+    1. "critical" = broken grammar, incorrect syntax, faulty word order, tense inconsistency, and articles/prepositions issues that cause misunderstanding;
+    2. "major" = grammatical defect but still understandable, unnatural phrasing, non-idiomatic for native speakers, collocations errors, fluency issues, punctuation or capitalization issues;
+    3. "minor" = style/wording preference only;
+- confidence must be one of the following: 
+    1. "high" = the defect is verifiable from explicit textual evidence; 
+    2. "low" = the judgment depends on context inference, cultural/idiomatic knowledge, borderline register, or a plausible alternative reading.
 - Output only structured issue data. Do not add extra explanations, commentary, or preamble.
-- Omit entries where the sentence is grammatically correct.
-- Do not return any repaired sentence text.
+- Omit entries where the sentence is grammatically correct (severity is none, no defects).
 - Return `issues` as an EMPTY list if all sentences are grammatically correct.
+- Do not return any repaired sentence text.
 - The issues should consider preserving the following whenever possible from the original text:
     1. Tone
     2. Vocabulary difficulty level
     3. Semantic intent
-    8. Wording style
+    4. Wording style
 
 Target language:
 {language}
@@ -77,9 +98,10 @@ def check_grammar_batch(
     Node: Check the batch and report only problematic sentences with UID and reason.
     """
 
+    main_state = state["main_state"]
     batch_id = state["batch_id"]
     batch = state["batch"]
-    language = state["main_state"]["issue_correction_request"].language
+    language = main_state["issue_correction_request"].language
 
     uids_batch = set(item.uid for item in batch.items)
     sentence_batch_txt = item_to_text(batch)
@@ -126,16 +148,24 @@ def check_grammar_batch(
         input=sys_prompt,
     )
 
-    if not result.issues:
+    # Filter:
+    # Preserve only issues with high confidence, and severity of "critical" or "major".
+    result.issues = [
+        issue
+        for issue in result.issues
+        if issue.confidence == "high" and issue.severity in ("critical", "major") 
+    ]
+
+    if result.issues:
+        return {
+            "issue_batches": { batch_id: result },
+        }
+    
+    else:
         writer = get_stream_writer()
         writer(StreamData(
             type=f"pass_grammar",
             processed_count=len(batch.items),
         ))
 
-    if result.issues:
-        return {
-            "issue_batches": { batch_id: result },
-        }
-    else:
         return {}

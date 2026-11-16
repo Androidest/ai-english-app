@@ -15,23 +15,35 @@ from app.workflow.schema_handlers.sentence_batch_handler import (
     validate_batch_sentence,
 )
 
-SYS_PROMPT_TEMPLATE = """You are an expert grammar corrector.
-Repair only the sentences listed below (a batch of sentences). Each sentence comes with a reason describing its grammar error.
+SYS_PROMPT_TEMPLATE = """You are a native-speaker grammar and fluency editor.
+Each entry includes a UID, the current sentence, a repair reason describing a grammar or naturalness defect in that sentence, and optional previous_val.
+Repair only the defects described by the reason.
+
+Input fields per entry:
+- uid: the key.
+- val: the current version of the sentence.
+- reason: the grammar/naturalness defect reported for `val`.
+- previous_val (optional): the value of `val` BEFORE the previous repair round. Absent on the first round.
+
+How to use previous_val:
+- If previous_val is absent: treat `val` as the original sentence and repair normally.
+- If `reason` describes a DIFFERENT defect not addressed by the previous change, repair it.
+- If `reason` is a synonym/style/elegance preference, or asks to revert/contradict the direction of the previous sentence (oscillation, e.g. "use A" then "use B" then "use A"), return `val` UNCHANGED as the current repaired sentence for that UID.
+- If `reason` restates the SAME defect that previous_val already attempted to fix and the current text is a reasonable faithful rendering, return `val` UNCHANGED as the current repaired sentence for that UID.
 
 Hard requirements:
 - Generate exactly one repaired sentence per UID.
 - Treat the UIDs as keys; preserve them exactly as supplied. Never create, delete, rename, or modify a UID.
 - Output only structured repaired data. Do not add extra explanations, commentary, or preamble.
-- Fix only the grammar error described in the repair reason for each sentence. Do not make unrelated changes.
-- Do not directly copy the supplied sentences. Modification is required; modify them according to their respective repair reasons.
-- Preserve all of the following whenever possible from the original text:
+- Fix only the defect described in the repair reason. Do not make unrelated changes.
+- Preserve all of the following whenever possible from the original sentence:
     1. Tone
     2. Vocabulary difficulty level
-    3. Sentence length
+    3. Sentence length (Fixing defects takes higher priority than this)
     4. Semantic intent
     5. Numbers and quantities
     6. Dates and times
-    7. Names and named entities
+    7. Names and named entities 
 
 Target language:
 {language}
@@ -40,13 +52,6 @@ Sentences to repair (with repair reasons):
 {items_to_fix}
 
 Now, Output the updated sentences.
-"""
-
-COPY_ERROR_TEMPLATE = """The following uids were returned with text identical to the original:
-{uids}
-
-You should fix the grammar error for these uids according to their reasons.
-These sentences should be modified, not copied.
 """
 
 
@@ -85,6 +90,7 @@ def fanout_fix_grammar_batch(
 def _build_issue_text(
     batch: SentenceBatch, 
     issue_batch: IssueBatch,
+    previous_batch: dict[str, str],
     output_batch: SentenceBatch = None,
 ) -> str:
 
@@ -104,6 +110,10 @@ def _build_issue_text(
                 "val": normalize_text(item.val),
                 "reason": normalize_text(uid_issue_map[item.uid]),
             }
+
+            if previous_batch:
+                new_item["previous_val"] = normalize_text(previous_batch[item.uid]),
+
             if output_batch:
                 new_item["repaired"] = normalize_text(uid_out_map[item.uid])
             items.append(new_item)
@@ -119,22 +129,27 @@ def fix_grammar_batch(
     """
     Node: Repair only the sentences flagged by the check node.
     """
-
-    batch_id = state["batch_id"]
-    batch = state["batch"]
     main_state = state["main_state"]
     req = main_state["issue_correction_request"]
+    batch_id = state["batch_id"]
+    attemps = req.max_attempts - main_state["remaining_attempts"] + 1
+    
+    batch = state["batch"]
     issue_batch = main_state["issue_batches"][batch_id]
     language = main_state["issue_correction_request"].language
-    attemps = req.max_attempts - main_state["remaining_attempts"] + 1
+    pre_corrected_batches = main_state["pre_corrected_batches"]
+    previous_batch = None
 
+    if len(pre_corrected_batches) > 0:
+        previous_batch = pre_corrected_batches[batch_id]
+        
     if len(issue_batch.issues) == 0:
         return {
             "corrected_batches":{}
         }
 
     uids_batch = set(issue.uid for issue in issue_batch.issues)
-    items_to_fix_txt = _build_issue_text(batch, issue_batch)
+    items_to_fix_txt = _build_issue_text(batch, issue_batch, previous_batch)
 
     def verify_cb(o: SentenceBatch):
 
@@ -155,16 +170,6 @@ def fix_grammar_batch(
             max_len=999,
             prompt_max_len=999,
         )
-
-        error_uids = []
-        sent_by_id = { item.uid: item.val for item in o.items }
-        for item in batch.items:
-            if item.uid in sent_by_id and sent_by_id[item.uid] == item.val:
-                error_uids.append(f'- uid="{item.uid}"')
-
-        if error_uids:
-            warnings.warn(f"[fix_grammar_batch] Repeating sentences: {[ item.uid for item in o.items ]}")
-            raise Exception(COPY_ERROR_TEMPLATE.format(uids="\n".join(error_uids)))
 
     llm = runtime.context.llm_runtime.get_model(
         temperature=0.3, # recommended temperature for grammar repair
@@ -188,12 +193,20 @@ def fix_grammar_batch(
     )
 
     logs = None
-    if result.items:
-        print(f"[attemps={attemps}, id={batch_id}] After Grammar Repair")
-        logs = f"--------- [attemps={attemps}, id={batch_id}] After Grammar Repair ---------------\n"
-        logs += _build_issue_text(batch, issue_batch, result)
+    print(f"[attemps={attemps}, id={batch_id}] After Grammar Repair")
+    logs = f"--------- [attemps={attemps}, id={batch_id}] After Grammar Repair ---------------\n"
+    logs += _build_issue_text(batch, issue_batch, previous_batch, result)
+
+    # Filter:
+    # Exclude repaired sentences that remain unchanged. (Means removing them from the recheck pool)
+    prev_item_map = { item.uid: item.val for item in batch.items }
+    result.items = [
+        new_item
+        for new_item in result.items
+        if prev_item_map[new_item.uid] != new_item.val # preseve the updated ones only
+    ]
 
     return {
-        "corrected_batches": { batch_id: result },
+        "corrected_batches": { batch_id: result } if result.items else {},
         "pending_logs": [logs] if logs else [],
     }

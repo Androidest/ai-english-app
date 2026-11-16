@@ -16,39 +16,43 @@ from app.workflow.schema_handlers.issue_batch_handler import (
     validate_batch_reasons,
 )
 
-SYS_PROMPT_TEMPLATE = """You are an expert translation and grammar checker.
-Identify only the sentences with translation and grammar issues. Do NOT repair them.
+SYS_PROMPT_TEMPLATE = """You are a translation quality gate, not a style editor.
+Report only substantive translation or grammar defects. Do NOT repair them.
 
 Hard requirements:
-- Return only issue entries for problematic translations.
-- Each issue must include only the UID and a reason thoroughly describing both the translation and grammatical issues in the translation.
-- Each reason description should be in one line. DO NOT SPLIT them into multiple lines.
-- Treat the UIDs as keys; preserve them exactly as supplied. Never create, delete, rename, or modify a UID.
+- Report an issue only when substantive defects are identified. Classify each one honestly.
+- Each issue must include uid, reason, severity and confidence.
+- Treat UIDs as keys; preserve them exactly as supplied. Never create, delete, rename, or modify a UID.
+- reason:
+    1. Must be a single line;
+    2. Must be written in the target translation language;
+    3. Describe the defect only. Do not suggest replacement wording;
+    4. State the defect precisely;
+- severity must be one of the following: 
+    1. "critical" = reversed/omitted/added substantive information, wrong number/date/name, or broken grammar causing misunderstanding;
+    2. "major" = substantive alignment or grammar defect but still understandable;
+    3. "minor" = style/wording preference only;
+- confidence must be one of the following: 
+    1. "high" = the defect is verifiable from explicit textual evidence, e.g. wrong number/date/name, reversed negation, clear omission/addition of substantive info, hard grammatical error, or an unambiguous mistranslation; 
+    2. "low" = the judgment depends on context inference, cultural/idiomatic knowledge, source ambiguity, borderline register, or a plausible alternative reading.
 - Output only structured issue data. Do not add extra explanations, commentary, or preamble.
-- Omit entries where the translation is correct and has no grammatical issues.
-- Do not return the translated source text or any repaired sentence text.
-- Return `issues` as an EMPTY list if all translations are correct.
-- The language of the reason must match the translation language.
-- [Top priority] Verify that each translated sentence closely aligns with its source sentence on all of the following:
+- Only output issues with severity "critical", "major" or "minor". Omit entries with zero defects.
+- Return `issues` as an EMPTY list if there is no issue.
+- Source errors are the baseline. Do not flag a faithful rendering of a source error as a translation or grammar issue of the target text.
+- [Top priority] Check substantive alignment on:
     1. Semantic intent
-    2. The original meaning
+    2. Original meaning
     3. Negation
     4. Tense/aspect meaning
     5. Modality
     6. Numbers and quantities
     7. Dates and times
     8. Names and named entities
-    9. Tone
-    10. Causal relationship
-    11. Wording style
-- Check whether the translations satisfy all of the following:
-    1. No meaningful information from the source is omitted.
-    2. No extra information not present in the source is added.
-    3. The translation reads naturally and smoothly.
-    4. The translation does not deviate from the original intent.
-- [IMPORTANT] When inspecting issues, use the logic and expression of the source sentence as the baseline for evaluation. 
-    Even if the source sentence contains errors, 
-    do not flag those inherent source errors as translation or grammatical issues of the target text.
+    9. Causal relationship
+    10. Omission/addition information
+- Check the following only when it causes misleading register mismatch:
+    1. Tone
+    2. Wording style
 
 Source Language:
 {src_language}
@@ -56,7 +60,7 @@ Source Language:
 Translation language:
 {language}
 
-Inspect the following {src_language}-{language} pairs for {language} translation and grammatical issues:
+Inspect the following {src_language}-{language} pairs:
 {batch_pairs}
 """
 
@@ -174,16 +178,24 @@ def check_translation_batch(
         input=sys_prompt,
     )
 
-    if not result.issues:
-        writer = get_stream_writer()
-        writer(StreamData(
-            type=f"pass_trans_{language}",
-            processed_count=len(src_batch.items),
-        ))
+    # Filter:
+    # Preserve only issues with high confidence, and severity of "critical" or "major".
+    result.issues = [
+        issue
+        for issue in result.issues
+        if issue.confidence == "high" and issue.severity in ("critical", "major") 
+    ]
 
     if result.issues:
         return {
             "issue_batches": { batch_id: result },
         }
+    
     else:
+        writer = get_stream_writer()
+        writer(StreamData(
+            type=f"pass_trans_{language}",
+            processed_count=len(src_batch.items),
+        ))
+        
         return {}

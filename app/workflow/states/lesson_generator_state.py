@@ -44,6 +44,7 @@ class LessonGeneratorState(TypedDict, total=False):
     # Temporally batches: They gather the results from fanned-out multi-parallel nodes after they fan in.
     issue_batches: Annotated[dict[str, IssueBatch], merge_batches] # Use 'Annotated' to add a reducer to it for parallel update.
     corrected_batches: Annotated[dict[str, SentenceBatch], merge_batches]
+    pre_corrected_batches: dict[str, dict[str, str]] # stores the sentences before the correction
 
     # ------ Temporally batches --------
     pending_batches: Annotated[dict[str, SentenceBatch], merge_batches] # a pending result waiting for later merging.
