@@ -1,7 +1,9 @@
 import gradio as gr
+import asyncio
 
 from app.ui.state_lessons import State_Lessons, FAV_LESSON, Meta
 from app.ui.state_llms import State_LLMs
+from app.ui.progress_bar import ProgressBar
 from app.utils.paths import PATH_LESSONS
 from app.utils.types import Language, CEFRLevel
 from app.workflow.schemas.lesson_generation_request import LessonGenerationRequest
@@ -120,7 +122,10 @@ class GenLessonDialog:
                 )
 
                 msg = gr.Markdown("", scale=0, elem_classes=["tip-msg"])
-                gr.Row(min_height=10)
+                progress_bar = ProgressBar(
+                    height=10,
+                    visible=False,
+                )
 
                 with gr.Row():
                     self.confirm_btn = gr.Button(
@@ -162,10 +167,12 @@ class GenLessonDialog:
                             max_concurrency,
                         ],
                         outputs=[
-                            state_lessons.metas, 
+                            state_lessons.metas,
+                            progress_bar,
                             msg, 
                             self.panel,
                             self.cancel_btn,
+                            self.confirm_btn,
                         ],
                         show_progress="hidden",
                     )
@@ -324,6 +331,7 @@ class GenLessonDialog:
                 metas[name] = new_meta
                 gr.Info(f"Lesson `{name}` has been generated successfully!")
                 print(f"Lesson `{name}` has been generated successfully!")
+                await asyncio.sleep(1)
 
             except Exception as e:
                 error = ERROR_TEMPLATE.format(msg=str(e))
@@ -346,22 +354,28 @@ class GenLessonDialog:
         if progress == 0:
             return (
                 gr.skip(), 
-                f"{progress*100:.1f}%",
+                gr.update(value=0, visible=True),
+                "",
                 gr.skip(), 
                 gr.update(interactive=False),
+                gr.update(value="Generating:  0%"),
             )
         # fineshed. close the window
         elif progress == None:
             return (
-                metas, 
+                metas,
+                gr.update(visible=False),
                 error,
                 gr.update(visible=error!=""),
                 gr.update(interactive=True),
+                gr.update(value="Generate")
             )
         else:
             return (
                 gr.skip(), 
-                f"{progress*100:.1f}%", 
+                gr.update(value=progress),
+                "", 
                 gr.skip(),
                 gr.skip(),
+                gr.update(value=f"Generating:  {progress*100:.1f}%")
             )
