@@ -165,10 +165,10 @@ class LessonGenerator(WorkflowBase):
         
         params = self._build_params(input, llm_config, user_id)
         state = params["input"]
-        async for type, data in self.graph.astream(**params, stream_mode=["values", "custom"]):
-            if type == "values":
+        async for namespace, mode, data in self.graph.astream(**params, stream_mode=["values", "custom"], subgraphs=True):
+            if mode == "values":
                 state = data
-            elif type == "custom":
+            elif mode == "custom":
                 yield data
 
         self.last_state = state

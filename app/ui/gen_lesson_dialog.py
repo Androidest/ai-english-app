@@ -269,6 +269,8 @@ class GenLessonDialog:
             print("Start generating lesson...")
 
             try:
+                yield self.build_on_generate_yields(0)
+
                 request = LessonGenerationRequest(
                     source_language = source_language,
                     source_max_len = source_max_len,
@@ -279,15 +281,22 @@ class GenLessonDialog:
                     batch_size = batch_size,
                     max_concurrency = max_concurrency,
                 )
+                
+                workflow = LessonGenerator()
+                iterator = workflow.astream(
+                    input=request, 
+                    llm_config=llm_configs[cur_llm], 
+                    user_id="TODO", 
+                )
 
                 cur_processed = 0
-                total = pages * (1 + len(display_languages)) + 1
-                workflow = LessonGenerator()
-
-                yield self.build_on_generate_yields(-1)
-                async for data in workflow.astream(input=request, llm_config=llm_configs[cur_llm], user_id="TODO"):
+                total = pages * (1 + len(display_languages)) * 2 + 1 
+                async for data in iterator:
                     cur_processed += data["processed_count"]
+                    print(data)
                     yield self.build_on_generate_yields(progress=cur_processed / total, metas=metas)
+
+                yield self.build_on_generate_yields(1)
 
                 gen_data = workflow.last_state["final_items"]
                 if len(gen_data) != request.target_count:
@@ -313,16 +322,18 @@ class GenLessonDialog:
 
                 metas = metas.copy()
                 metas[name] = new_meta
+                gr.Info(f"Lesson `{name}` has been generated successfully!")
+                print(f"Lesson `{name}` has been generated successfully!")
 
             except Exception as e:
                 error = ERROR_TEMPLATE.format(msg=str(e))
-                raise e
+                # raise e
 
-        yield self.build_on_generate_yields(progress=1, error=error, metas=metas)
+        yield self.build_on_generate_yields(progress=None, error=error, metas=metas)
 
     def build_on_generate_yields(
         self,
-        progress: int,
+        progress: int | None,
         error: str = "",
         metas: dict[str, Meta] = None,
     ) -> tuple:
@@ -331,14 +342,16 @@ class GenLessonDialog:
         Build the returning data for `on_generate`
         """
 
-        if progress == -1:
+        # start generating: first iteration
+        if progress == 0:
             return (
                 gr.skip(), 
-                "", 
+                f"{progress*100:.1f}%",
                 gr.skip(), 
                 gr.update(interactive=False),
             )
-        elif progress >= 1:
+        # fineshed. close the window
+        elif progress == None:
             return (
                 metas, 
                 error,
