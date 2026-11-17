@@ -26,3 +26,5 @@ Language = Literal[
     "Chinese",
     "Spanish",
 ]
+
+LANG_OPTIONS = Literal["--", Language]

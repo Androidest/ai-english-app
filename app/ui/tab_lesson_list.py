@@ -1,6 +1,11 @@
 import gradio as gr
 from app.ui.state_llms import State_LLMs
-from app.ui.state_lessons import State_Lessons, Meta, SORT_ALPHA_A_Z, SORT_ALPHA_Z_A, SORT_LATEST, SORT_OLDEST, FAV_LESSON
+from app.ui.state_lessons import (
+    State_Lessons, 
+    Meta, 
+    Cache, 
+    SORT_ALPHA_A_Z, SORT_ALPHA_Z_A, SORT_LATEST, SORT_OLDEST, FAV_LESSON
+)
 from app.ui.gen_lesson_dialog import GenLessonDialog
 
 class Tab_Lesson_List:
@@ -38,7 +43,7 @@ class Tab_Lesson_List:
         
         # list of lessons
         @gr.render(inputs=[state_lessons.metas, state_lessons.sort_by, s_search])
-        def render_tab(lessons: dict, sort_by: str, search: str):
+        def render_tab(lessons: dict[str, Meta], sort_by: str, search: str):
             with gr.Row():
 
                 # search lessons
@@ -90,11 +95,19 @@ class Tab_Lesson_List:
                     gen_lesson_dialog.attach(add_btn)
 
     def on_click_sort_by(self, cur_sort_by: str):
-            self.state_lessons.save_cache({ "cur_sort_by": cur_sort_by })
+            self.state_lessons.save_cache(
+                cache=Cache( 
+                    cur_sort_by = cur_sort_by
+                )
+            )
             return cur_sort_by
 
     def on_choose_lesson(self, meta: Meta) -> tuple:
         lesson_name = meta["name"]
         print(f"Choose lesson: {lesson_name}")
-        self.state_lessons.save_cache({ "cur_lesson": lesson_name })
+        self.state_lessons.save_cache(
+            cache=Cache(
+                cur_lesson=lesson_name,
+            )
+        )
         return lesson_name

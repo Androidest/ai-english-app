@@ -1,7 +1,7 @@
 import gradio as gr
 from app.ui.confirm_dialog import ConfirmDialog
 from app.ui.state_llms import State_LLMs
-from app.ui.state_lessons import State_Lessons, FAV_LESSON, Meta
+from app.ui.state_lessons import State_Lessons, FAV_LESSON, Meta, Cache
 from app.utils.sheet import Sheet
 
 ERROR_TEMPLATE = "<span style='color: #e39696; font-size: 18px;'>{msg}</span>"
@@ -209,7 +209,11 @@ class Tab_Lesson_Chosen:
 
         # reset current lesson to empty, back to the lessons list
         new_cur_lesson = ""
-        self.state_lessons.save_cache({ "cur_lesson": new_cur_lesson })
+        self.state_lessons.save_cache(
+            cache=Cache(
+                cur_lesson=new_cur_lesson,
+            )
+        )
         
         return new_lessons, new_cur_lesson, () # cur_meta is empty when no lesson is selected, back to the lessons list
 
@@ -220,7 +224,11 @@ class Tab_Lesson_Chosen:
             del new_lessons[lesson_name]
             self.state_lessons.delete_sheet(lesson_name)
             self.state_lessons.delete_meta(lesson_name)
-            self.state_lessons.save_cache({ "cur_lesson": new_cur_lesson })
+            self.state_lessons.save_cache(
+                cache=Cache(
+                    cur_lesson=new_cur_lesson,
+                )
+            )
             gr.Info(f"⛔ Lesson {lesson_name} deleted successfully! ⛔")
     
             return new_lessons, new_cur_lesson

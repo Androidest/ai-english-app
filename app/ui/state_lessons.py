@@ -1,7 +1,7 @@
 import gradio as gr
 from app.utils.paths import PATH_LESSONS
 from app.utils.sheet import Sheet
-from app.utils.types import Language, CEFRLevel
+from app.utils.types import Language, CEFRLevel, LANG_OPTIONS
 from typing import TypedDict
 import json
 
@@ -22,18 +22,32 @@ PATH_FAV_META = PATH_LESSONS / f"{FAV_LESSON}.json"
 class Meta(TypedDict):
     name: str
     time_created: float
-    progress_idx: int = 0
-    phrases_flag: dict[str, int] = {} # key: page index, val: stores flags as bits. 
-    correct_count: int = 0
-    favourite_count: int = 0
-    total: int = 0
+    progress_idx: int
+    phrases_flag: dict[str, int] # key: page index, val: stores flags as bits. 
+    correct_count: int
+    favourite_count: int
+    total: int
 
-    source_language: Language = "--"
-    source_max_len: int =  0
+    source_language: Language
+    source_max_len: int
     topic: str
-    difficulty: CEFRLevel = "--"
+    difficulty: CEFRLevel
     pages: int
-    display_languages: list[CEFRLevel] = []
+    display_languages: list[CEFRLevel]
+    batch_size: int
+    max_concurrency: int
+
+class Cache(TypedDict):
+    cur_lesson: int
+    cur_sort_by: str
+    # gen lesson dialog input cache
+    source_language: Language
+    source_max_len: int
+    topic: str
+    difficulty: CEFRLevel
+    pages: int
+    display_language_1: LANG_OPTIONS
+    display_language_2: LANG_OPTIONS
     batch_size: int
     max_concurrency: int
 
@@ -42,6 +56,7 @@ class State_Lessons:
         self.metas: dict[str, Meta] = gr.State(value={})
         self.cur_lesson = gr.State(value=None)
         self.sort_by = gr.State(value="")
+        self.cache = gr.State(value=None)
         self.pending_uppdate_meta = gr.State(value=tuple())
     
     def load_to_outputs(self) -> tuple:
@@ -58,20 +73,40 @@ class State_Lessons:
         if cur_lesson not in metas:
             cur_lesson = ""
 
-        return metas, cur_lesson, cur_sort_by
+        return (
+            metas, 
+            cur_lesson, 
+            cur_sort_by,
+            cache,
+        )
 
     def outputs(self):
-        return [self.metas, self.cur_lesson, self.sort_by]
+        return [
+            self.metas, 
+            self.cur_lesson, 
+            self.sort_by,
+            self.cache
+        ]
 
     # region Cache Management
 
-    def create_default_cache(self) -> dict:
-        return {
-            "cur_lesson": "",
-            "cur_sort_by": SORT_LATEST,
-        }
+    def create_default_cache(self) -> Cache:
+        return Cache(
+            cur_lesson = "",
+            cur_sort_by = SORT_LATEST,
 
-    def load_cache(self) -> dict:
+            source_language = "English",
+            source_max_len = 100,
+            topic = "Anything",
+            difficulty = "A1",
+            pages = 10,
+            display_language_1 = "--",
+            display_language_2 = "--",
+            batch_size = 5,
+            max_concurrency = 20,
+        )
+
+    def load_cache(self) -> Cache:
         if PATH_CACHE.exists():
             with open(PATH_CACHE, "r", encoding="utf-8") as f:
                 return json.load(f)
@@ -80,7 +115,12 @@ class State_Lessons:
             self.save_cache(cache, override_all=True)
             return cache
         
-    def save_cache(self, cache: dict, override_all: bool = False):
+    def save_cache(
+        self, 
+        cache: Cache, 
+        override_all: bool = False
+    ) -> Cache:
+        
         if not PATH_LESSONS.exists():
             PATH_LESSONS.mkdir(parents=True, exist_ok=True)
 
@@ -105,7 +145,7 @@ class State_Lessons:
         lesson_name: str, 
         data: list[dict[str, str]],
         display_languages_order: list[Language],
-    ):
+    ) -> Sheet:
         lang_key_map = { display_languages_order[0]: "DIS_1" }
         if len(display_languages_order) > 1:
             lang_key_map[display_languages_order[1]] = "DIS_2"
@@ -121,11 +161,11 @@ class State_Lessons:
         return sheet
 
     def save_favourite(
-            self, 
-            val: dict, 
-            meta: Meta, 
-            idx: int
-        ):
+        self, 
+        val: dict, 
+        meta: Meta, 
+        idx: int
+    ):
 
         """
         Saving favourite phrase can only be done from the origin lesson.
@@ -171,12 +211,13 @@ class State_Lessons:
         self.save_meta(meta)
 
     def delete_favourite(
-            self, 
-            en_key: str,
-            meta:Meta, 
-            idx:int,
-            is_origin:bool,
-        ):
+        self, 
+        en_key: str,
+        meta:Meta, 
+        idx:int,
+        is_origin:bool,
+    ) -> tuple[Sheet, str]:
+        
         """
         Remove the favourite phrase from:
             1. From the Favourite sheet 
@@ -193,10 +234,11 @@ class State_Lessons:
             fav_sheet
         """
 
-        origin_meta, fav_meta = None, None
+        origin_meta: Meta = None
+        fav_meta: Meta = None
         origin_idx, fav_idx = -1, -1
-        fav_sheet = None
-        pending_origin = None
+        fav_sheet: Sheet = None
+        pending_origin: str = None
 
         # deal it from the origin meta
         if is_origin:
@@ -247,20 +289,31 @@ class State_Lessons:
 
         return fav_sheet, pending_origin
 
-    def find_phrase_idx(self, sheet: Sheet, src: str):
+    def find_phrase_idx(
+        self, 
+        sheet: Sheet, 
+        src: str
+    ) -> int:
+        
         mask = sheet.dataframe["SRC"] == src
         positions = sheet.dataframe[mask].index.tolist()
         if len(positions) > 0:
             return positions[0]
         return -1
 
-    def save_sheet(self, sheet: Sheet):
+    def save_sheet(
+        self, 
+        sheet: Sheet
+    ):
         if not PATH_LESSONS.exists():
             PATH_LESSONS.mkdir(parents=True, exist_ok=True)
 
         sheet.save()
 
-    def load_sheet(self, lesson_name: str) -> Sheet:
+    def load_sheet(
+        self, 
+        lesson_name: str
+    ) -> Sheet:
         path = PATH_LESSONS / f"{lesson_name}.xlsx"
         if not path.exists():
             raise ValueError(f"Lesson {lesson_name} does not exist")
@@ -268,7 +321,10 @@ class State_Lessons:
         sheet = Sheet(path)
         return sheet
 
-    def delete_sheet(self, lesson_name: str):
+    def delete_sheet(
+        self, 
+        lesson_name: str
+    ):
         path = PATH_LESSONS / f"{lesson_name}.xlsx"
         if path.exists():
             path.unlink()
@@ -277,7 +333,12 @@ class State_Lessons:
 
     # region Meta Management Functions
 
-    def create_default_meta(self, lesson_name: str, sheet: Sheet) -> Meta:
+    def create_default_meta(
+        self, 
+        lesson_name: str, 
+        sheet: Sheet
+    ) -> Meta:
+        
         meta = Meta(
             name = lesson_name,
             time_created = sheet.get_time_created(),
@@ -323,7 +384,11 @@ class State_Lessons:
 
         return meta
 
-    def load_meta(self, lesson_name: str) -> Meta:
+    def load_meta(
+        self, 
+        lesson_name: str
+    ) -> Meta:
+        
         meta_path = PATH_LESSONS / f"{lesson_name}.json"
         if meta_path.exists():
             with open(meta_path, "r", encoding="utf-8") as f:
@@ -334,12 +399,20 @@ class State_Lessons:
             self.save_meta(meta, override_all=True)
             return meta
 
-    def delete_meta(self, lesson_name: str):
+    def delete_meta(
+        self, 
+        lesson_name: str
+    ):
         path = PATH_LESSONS / f"{lesson_name}.json"
         if path.exists():
             path.unlink()
 
-    def make_brief_meta(self, meta: Meta, total: int = None) -> Meta:
+    def make_brief_meta(
+        self, 
+        meta: Meta, 
+        total: int = None
+    ) -> Meta:
+        
         if total is not None:
             meta["total"] = total
             self.update_progress(meta, meta["progress_idx"])
@@ -358,7 +431,12 @@ class State_Lessons:
 
         return meta
 
-    def update_progress(self, meta: Meta, idx: int) -> Meta:
+    def update_progress(
+        self, 
+        meta: Meta, 
+        idx: int
+    ) -> Meta:
+        
         if idx >= meta["total"]:
             idx = meta["total"] - 1
         if idx < 0:
@@ -366,17 +444,35 @@ class State_Lessons:
         meta["progress_idx"] = idx
         return meta
 
-    def is_phrase_passed(self, meta: Meta, idx: int) -> bool:
+    def is_phrase_passed(
+        self, 
+        meta: Meta, 
+        idx: int
+    ) -> bool:
         return meta["phrases_flag"].get(str(idx), 0) & IS_PASSED == IS_PASSED
 
-    def is_phrase_favourite(self, meta: Meta, idx: int) -> bool:
+    def is_phrase_favourite(
+        self, 
+        meta: Meta, 
+        idx: int
+    ) -> bool:
         return meta["phrases_flag"].get(str(idx), 0) & IS_FAVORITE == IS_FAVORITE
 
-    def toggle_phrase_favorite(self, meta: Meta, idx: int) -> Meta:
+    def toggle_phrase_favorite(
+        self, 
+        meta: Meta, 
+        idx: int
+    ) -> Meta:
         meta["phrases_flag"][str(idx)] = meta["phrases_flag"].get(str(idx), 0) ^ IS_FAVORITE
         return meta
 
-    def set_favourite_phrase(self, meta: Meta, idx: int, is_favourite: bool) -> Meta:
+    def set_favourite_phrase(
+        self, 
+        meta: Meta, 
+        idx: int, 
+        is_favourite: bool
+    ) -> Meta:
+        
         if is_favourite:
             meta["phrases_flag"][str(idx)] = meta["phrases_flag"].get(str(idx), 0) | IS_FAVORITE
         else:
@@ -385,14 +481,24 @@ class State_Lessons:
                 del meta["phrases_flag"][str(idx)]
         return meta
     
-    def set_pass_phrase(self, meta: Meta, idx: int, is_correct: bool) -> Meta:
+    def set_pass_phrase(
+        self, 
+        meta: Meta, 
+        idx: int, 
+        is_correct: bool
+    ) -> Meta:
+        
         if is_correct:
             meta["phrases_flag"][str(idx)] = meta["phrases_flag"].get(str(idx), 0) | IS_PASSED
         else:
             meta["phrases_flag"][str(idx)] = meta["phrases_flag"].get(str(idx), 0) & ~IS_PASSED
         return meta
 
-    def reset_meta(self, meta: Meta) -> Meta:
+    def reset_meta(
+        self, 
+        meta: Meta
+    ) -> Meta:
+        
         meta["phrases_flag"] = {
             idx: flag & ~IS_PASSED
             for idx, flag in meta["phrases_flag"].items() if flag != IS_PASSED
@@ -405,7 +511,12 @@ class State_Lessons:
 
      # region Misc Functions
         
-    def sort_lessons(self, lessons: dict, sort_by: str) -> list[(str, dict)]:
+    def sort_lessons(
+        self, 
+        lessons: dict[str, Meta], 
+        sort_by: str
+    ) -> list[(str|float, dict[str, Meta])]:
+        
         if sort_by == SORT_LATEST:
             return sorted(lessons.items(), key=lambda item: item[1]["time_created"], reverse=True)
         elif sort_by == SORT_OLDEST:
@@ -414,12 +525,21 @@ class State_Lessons:
             return sorted(lessons.items(), key=lambda item: item[0])
         elif sort_by == SORT_ALPHA_Z_A:
             return sorted(lessons.items(), key=lambda item: item[0], reverse=True)
-        return 
+        return lessons.items()
     
-    def filter_lessons(self, lessons: dict, search: str) -> dict:
+    def filter_lessons(
+        self, 
+        lessons: dict[str, Meta], 
+        search: str
+    ) -> dict[str, Meta]:
+        
         if search == "":
             return lessons
         else:
-            return { k: v for k, v in lessons.items() if search in k or search in v["name"] }
+            return { 
+                k: v 
+                for k, v in lessons.items() 
+                if search in k or search in v["name"] 
+            }
 
     # endregion Misc Functions

@@ -1,15 +1,13 @@
 import gradio as gr
 import asyncio
 
-from app.ui.state_lessons import State_Lessons, FAV_LESSON, Meta
+from app.ui.state_lessons import State_Lessons, FAV_LESSON, Meta, Cache
 from app.ui.state_llms import State_LLMs
 from app.ui.progress_bar import ProgressBar
 from app.utils.paths import PATH_LESSONS
-from app.utils.types import Language, CEFRLevel
+from app.utils.types import Language, CEFRLevel, LANG_OPTIONS
 from app.workflow.schemas.lesson_generation_request import LessonGenerationRequest
 from app.workflow.graphs.lesson_generator import LessonGenerator
-
-LANG_OPTIONS = ["--"] + list(Language.__args__)
 
 class GenLessonDialog:
     def __init__(self, state_lessons: State_Lessons, state_llms: State_LLMs):
@@ -79,8 +77,8 @@ class GenLessonDialog:
                 with gr.Row():
                     display_language_1 = gr.Dropdown(
                         label="Display language 1", 
-                        choices=LANG_OPTIONS, 
-                        value=LANG_OPTIONS[0], 
+                        choices=LANG_OPTIONS.__args__, 
+                        value=LANG_OPTIONS.__args__[0], 
                         scale=1, 
                         interactive=True, 
                         min_width=80
@@ -88,10 +86,10 @@ class GenLessonDialog:
 
                     display_language_2 = gr.Dropdown(
                         label="Display language 2", 
-                        choices=LANG_OPTIONS, 
-                        value=LANG_OPTIONS[0], 
+                        choices=LANG_OPTIONS.__args__, 
+                        value=LANG_OPTIONS.__args__[0], 
                         scale=1, 
-                        interactive=True, 
+                        interactive=True,
                         min_width=80
                     )
 
@@ -120,6 +118,18 @@ class GenLessonDialog:
                     scale=1, 
                     interactive=True
                 )
+
+                self.form_components = [
+                    source_language,
+                    source_max_len,
+                    topic,
+                    difficulty,
+                    pages,
+                    display_language_1,
+                    display_language_2,
+                    batch_size,
+                    max_concurrency,
+                ]
 
                 msg = gr.Markdown("", scale=0, elem_classes=["tip-msg"])
                 progress_bar = ProgressBar(
@@ -154,17 +164,8 @@ class GenLessonDialog:
                             state_lessons.metas, 
                             state_llms.configs, 
                             state_llms.cur_llm, 
-                            name, 
-
-                            source_language,
-                            source_max_len,
-                            topic,
-                            difficulty,
-                            pages,
-                            display_language_1,
-                            display_language_2,
-                            batch_size,
-                            max_concurrency,
+                            name,
+                            *self.form_components,
                         ],
                         outputs=[
                             state_lessons.metas,
@@ -173,6 +174,7 @@ class GenLessonDialog:
                             self.panel,
                             self.cancel_btn,
                             self.confirm_btn,
+                            state_lessons.cache,
                         ],
                         show_progress="hidden",
                     )
@@ -184,14 +186,32 @@ class GenLessonDialog:
                     )
 
     def attach(
-            self, 
-            trigger: gr.Button,
-        ):
+        self, 
+        trigger: gr.Button,
+    ):
+        def on_click(cache: Cache):
+            return (
+                gr.update(visible=True),
+                gr.update(value=cache["source_language"]),
+                gr.update(value=cache["source_max_len"]),
+                gr.update(value=cache["topic"]),
+                gr.update(value=cache["difficulty"]),
+                gr.update(value=cache["pages"]),
+                gr.update(value=cache["display_language_1"]),
+                gr.update(value=cache["display_language_2"]),
+                gr.update(value=cache["batch_size"]),
+                gr.update(value=cache["max_concurrency"]),
+            )
 
         trigger.click(
-            fn=lambda: gr.update(visible=True),
-            inputs=None,
-            outputs=[self.panel]
+            fn=on_click,
+            inputs=[
+                self.state_lessons.cache,
+            ],
+            outputs=[
+                self.panel,
+                *self.form_components,
+            ]
         )
 
     async def on_generate(
@@ -275,8 +295,20 @@ class GenLessonDialog:
             print(f"LLM: {cur_llm}", llm_configs[cur_llm])
             print("Start generating lesson...")
 
+            cache = self.state_lessons.save_cache(Cache(
+                source_language = source_language,
+                source_max_len = source_max_len,
+                topic = topic,
+                difficulty = difficulty,
+                pages = pages,
+                display_language_1 = display_language_1,
+                display_language_2 = display_language_2,
+                batch_size = batch_size,
+                max_concurrency = max_concurrency,
+            ))
+
             try:
-                yield self.build_on_generate_yields(0)
+                yield self.build_on_generate_yields(0, cache=cache)
 
                 request = LessonGenerationRequest(
                     source_language = source_language,
@@ -344,6 +376,7 @@ class GenLessonDialog:
         progress: int | None,
         error: str = "",
         metas: dict[str, Meta] = None,
+        cache: Cache = None,
     ) -> tuple:
 
         """
@@ -359,6 +392,7 @@ class GenLessonDialog:
                 gr.skip(), 
                 gr.update(interactive=False),
                 gr.update(value="Generating:  0%"),
+                cache,
             )
         # fineshed. close the window
         elif progress == None:
@@ -368,7 +402,8 @@ class GenLessonDialog:
                 error,
                 gr.update(visible=error!=""),
                 gr.update(interactive=True),
-                gr.update(value="Generate")
+                gr.update(value="Generate"),
+                gr.skip(), 
             )
         else:
             return (
@@ -377,5 +412,6 @@ class GenLessonDialog:
                 "", 
                 gr.skip(),
                 gr.skip(),
-                gr.update(value=f"Generating:  {progress*100:.1f}%")
+                gr.update(value=f"Generating:  {progress*100:.1f}%"),
+                gr.skip(),
             )
