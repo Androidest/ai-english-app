@@ -153,9 +153,18 @@ class State_Lessons:
             fav_idx = self.find_phrase_idx(sheet, val["SRC"])
             if fav_idx == -1:
                 sheet.append(val)
-
                 self.save_sheet(sheet)
-                self.save_meta({ "name": FAV_LESSON, "total": len(sheet) }, override_all=False)
+
+                updates = { 
+                    "name": FAV_LESSON,
+                    "total": len(sheet)
+                }
+
+                fav_meta = self.load_meta(FAV_LESSON)
+                if fav_meta["progress_idx"] < 0:
+                    updates["progress_idx"] = 0
+
+                self.save_meta(updates, override_all=False)
 
         self.set_favourite_phrase(meta, idx, True)
         self.make_brief_meta(meta)
@@ -271,7 +280,7 @@ class State_Lessons:
     def create_default_meta(self, lesson_name: str, sheet: Sheet) -> Meta:
         meta = Meta(
             name = lesson_name,
-            time_created = sheet.time_created,
+            time_created = sheet.get_time_created(),
             progress_idx=0,
             phrases_flag={},
             correct_count=0,
@@ -350,10 +359,10 @@ class State_Lessons:
         return meta
 
     def update_progress(self, meta: Meta, idx: int) -> Meta:
+        if idx >= meta["total"]:
+            idx = meta["total"] - 1
         if idx < 0:
             idx = 0
-        elif idx >= meta["total"]:
-            idx = meta["total"] - 1
         meta["progress_idx"] = idx
         return meta
 

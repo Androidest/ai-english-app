@@ -18,7 +18,7 @@ with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for
 
     with gr.Row():
         with gr.Column(scale=1):
-            gr.Markdown("# Zeenom English", elem_classes=["main-title"], scale=1)
+            gr.Markdown("# Zeenom Language Learner", elem_classes=["main-title"], scale=1)
 
         with gr.Column(scale=0, min_width=200):
             @gr.render(inputs=[state_llms.configs, state_llms.cur_llm])

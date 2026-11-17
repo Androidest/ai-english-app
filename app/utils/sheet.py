@@ -5,6 +5,7 @@ import os
 import numpy as np
 from pathlib import Path
 from typing import Union
+import time
 
 class Sheet:
     def __init__(self, 
@@ -19,7 +20,6 @@ class Sheet:
         
         self.excel_file_path = Path(excel_file_path)
         self.sheet_name = sheet_name
-        self.time_created = 0
         if (default_data or conlumns) and \
            (clear or not self.excel_file_path.exists()):
             if sheet_name is None:
@@ -29,7 +29,6 @@ class Sheet:
             try:
                 with pd.ExcelFile(self.excel_file_path) as excel_file:
                     sheet_names = excel_file.sheet_names
-                    self.time_created = os.path.getctime(self.excel_file_path)
                     
                     for name in sheet_names:
                         if sheet_name is not None and name != sheet_name:
@@ -42,6 +41,13 @@ class Sheet:
                 raise FileNotFoundError(f"File '{excel_file_path}' not found")
             except Exception as e:
                 raise Exception(f"Error reading file '{excel_file_path}': {e}")
+
+    def get_time_created(self):
+        if self.excel_file_path.exists():
+            time_created = os.path.getctime(self.excel_file_path)
+        else:
+            time_created = time.time()
+        return time_created
     
     def __len__(self):
         return self.dataframe.shape[0]

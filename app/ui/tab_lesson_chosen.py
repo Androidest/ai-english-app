@@ -34,10 +34,10 @@ class Tab_Lesson_Chosen:
             s_progress_idx = gr.State(progress_idx)
             is_FAV_LESSON = meta["name"] == FAV_LESSON
 
+            if progress_idx >= len(sheet):
+                progress_idx = len(sheet)-1
             if progress_idx < 0:
                 progress_idx = 0
-            elif progress_idx >= len(sheet):
-                progress_idx = len(sheet)-1            
 
             with gr.Row(elem_classes=["progress-bar-track"]):
                 gr.HTML(f'''
