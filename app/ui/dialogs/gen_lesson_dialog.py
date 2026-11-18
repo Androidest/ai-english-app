@@ -1,7 +1,9 @@
 import gradio as gr
 import asyncio
 
-from app.ui.states.state_lessons import State_Lessons, FAV_LESSON, Meta, Cache
+from app.ui.models.cache import Cache
+from app.ui.models.meta import Meta
+from app.ui.states.state_lessons import State_Lessons, FAV_LESSON
 from app.ui.states.state_llms import State_LLMs
 from app.ui.components.progress_bar import ProgressBar
 from app.utils.paths import PATH_LESSONS

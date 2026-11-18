@@ -1,7 +1,8 @@
 import gradio as gr
 from app.ui.dialogs.confirm_dialog import ConfirmDialog
+from app.ui.models.meta import Meta
 from app.ui.states.state_llms import State_LLMs
-from app.ui.states.state_lessons import State_Lessons, Meta
+from app.ui.states.state_lessons import State_Lessons
 from app.ui.components.tab_lesson_list import Tab_Lesson_List
 from app.ui.components.tab_lesson_chosen import Tab_Lesson_Chosen
 from app.ui.dialogs.gen_lesson_dialog import GenLessonDialog

@@ -1,8 +1,9 @@
 import gradio as gr
+from app.ui.models.cache import Cache
+from app.ui.models.meta import Meta
 from app.utils.paths import PATH_LESSONS
 from app.utils.sheet import Sheet
-from app.utils.types import Language, CEFRLevel, LANG_OPTIONS
-from typing import TypedDict
+from app.utils.types import Language
 import json
 
 IS_FAVORITE = 0b01
@@ -18,38 +19,6 @@ FAV_LESSON = "Favourite"
 PATH_FAV_SHEET = PATH_LESSONS / f"{FAV_LESSON}.xlsx"
 PATH_FAV_META = PATH_LESSONS / f"{FAV_LESSON}.json"
 
-
-class Meta(TypedDict):
-    name: str
-    time_created: float
-    progress_idx: int
-    phrases_flag: dict[str, int] # key: page index, val: stores flags as bits. 
-    correct_count: int
-    favourite_count: int
-    total: int
-
-    source_language: Language
-    source_max_len: int
-    topic: str
-    difficulty: CEFRLevel
-    target_count: int
-    display_languages: list[CEFRLevel]
-    batch_size: int
-    max_concurrency: int
-
-class Cache(TypedDict):
-    cur_lesson: int
-    cur_sort_by: str
-    # gen lesson dialog input cache
-    source_language: Language
-    source_max_len: int
-    topic: str
-    difficulty: CEFRLevel
-    target_count: int
-    display_language_1: LANG_OPTIONS
-    display_language_2: LANG_OPTIONS
-    batch_size: int
-    max_concurrency: int
 
 class State_Lessons:
     def __init__(self):

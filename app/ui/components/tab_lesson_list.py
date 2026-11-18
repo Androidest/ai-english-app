@@ -1,9 +1,9 @@
 import gradio as gr
+from app.ui.models.cache import Cache
+from app.ui.models.meta import Meta
 from app.ui.states.state_llms import State_LLMs
 from app.ui.states.state_lessons import (
     State_Lessons, 
-    Meta, 
-    Cache, 
     SORT_ALPHA_A_Z, SORT_ALPHA_Z_A, SORT_LATEST, SORT_OLDEST, FAV_LESSON
 )
 from app.ui.dialogs.gen_lesson_dialog import GenLessonDialog
