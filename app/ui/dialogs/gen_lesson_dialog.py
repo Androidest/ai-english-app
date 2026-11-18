@@ -6,6 +6,7 @@ from app.ui.models.meta import Meta
 from app.ui.models.lesson_gen_params import LessonGenParams, LESSON_GEN_PARAMS_ORDER
 from app.ui.states.state_lessons import State_Lessons, FAV_LESSON
 from app.ui.states.state_llms import State_LLMs
+from app.workflow._core_.llm_config import LLMConfig
 from app.ui.components.progress_bar import ProgressBar
 from app.utils.paths import PATH_LESSONS
 from app.utils.types import Language, CEFRLevel, LANG_OPTIONS
@@ -18,20 +19,14 @@ class GenLessonDialog:
     def __init__(self, state_lessons: State_Lessons, state_llms: State_LLMs):
 
         self.state_lessons = state_lessons
+        self.state_llms = state_llms
 
         with gr.Group(visible=False, elem_classes=["dialog-overlay"]) as self.panel:
 
             with gr.Column(elem_classes=["dialog-panel", "gen-dialog-panel"]):
 
-                # dynamic display
                 gr.Markdown("AI Lesson Generator", elem_classes=["dialog-message"], scale=0)
-
-                @gr.render(inputs=[state_llms.configs, state_llms.cur_llm])
-                def render_items(llm_configs: list[dict], cur_llm: int):   
-                    cur_llm_name = "-- Not Selected --"
-                    if cur_llm != -1 and len(llm_configs) > cur_llm:
-                        cur_llm_name = llm_configs[cur_llm].alias
-                    gr.Textbox(cur_llm_name, elem_classes=["cur-ai"], max_lines=1, scale=1, container=False)
+                self.cur_ai = gr.Textbox("", elem_classes=["cur-ai"], max_lines=1, scale=1, container=False)
 
                 name = gr.Textbox (
                     "", 
@@ -198,10 +193,19 @@ class GenLessonDialog:
         self, 
         trigger: gr.Button,
     ):
-        def on_click(cache: Cache):
+        def on_click(
+            cache: Cache, 
+            llm_configs: LLMConfig, 
+            cur_llm: int
+        ):
+            cur_llm_name = "-- Not Selected --"
+            if cur_llm != -1 and len(llm_configs) > cur_llm:
+                cur_llm_name = llm_configs[cur_llm].alias
+
             params = cache.gen_params.model_dump()
             return (
                 gr.update(visible=True), # for `self.panel``
+                cur_llm_name, # self.cur_ai
                 *[gr.update(value=params[field]) for field in LESSON_GEN_PARAMS_ORDER], # for `*self.form_components``
             )
 
@@ -209,9 +213,12 @@ class GenLessonDialog:
             fn=on_click,
             inputs=[
                 self.state_lessons.cache,
+                self.state_llms.configs,
+                self.state_llms.cur_llm,
             ],
             outputs=[
                 self.panel,
+                self.cur_ai,
                 *self.form_components,
             ]
         )
@@ -219,8 +226,8 @@ class GenLessonDialog:
     async def on_generate(
         self, 
         metas: dict[str, Meta], 
-        llm_configs: list, #
-        cur_llm: str,  #
+        llm_configs: list[LLMConfig], #
+        cur_llm: int,  #
         name: str, #
         *form_params,
     ):
@@ -298,7 +305,10 @@ class GenLessonDialog:
 
                 # build the meta file of the sheet
                 new_meta = self.state_lessons.create_default_meta(name, sheet, gen_params)
-                new_meta = self.state_lessons.save_meta(meta=new_meta)
+                new_meta = self.state_lessons.save_meta(
+                    meta=new_meta,
+                    ai_model_name=llm_configs[cur_llm].alias,
+                )
                 metas = metas.copy()
                 metas[name] = new_meta
 

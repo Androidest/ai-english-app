@@ -6,6 +6,7 @@ from app.ui.states.state_lessons import State_Lessons
 from app.ui.components.tab_lesson_list import Tab_Lesson_List
 from app.ui.components.tab_lesson_chosen import Tab_Lesson_Chosen
 from app.ui.dialogs.gen_lesson_dialog import GenLessonDialog
+from app.ui.dialogs.lesson_gen_info_dialog import LessonGenInfoDialog
 
 class Tab_Lesson:
 
@@ -15,6 +16,7 @@ class Tab_Lesson:
             state_llms: State_LLMs, 
             confirm_dialog: ConfirmDialog, 
             gen_lesson_dialog: GenLessonDialog,
+            lesson_gen_info_dialog: LessonGenInfoDialog,
         ):
 
         with gr.Tab("Lessons"):
@@ -25,6 +27,17 @@ class Tab_Lesson:
                     return
 
                 if cur_lesson == "":
-                    Tab_Lesson_List(state_lessons, state_llms, gen_lesson_dialog)
+                    Tab_Lesson_List(
+                        state_lessons, 
+                        state_llms, 
+                        gen_lesson_dialog
+                    )
                 else:
-                    Tab_Lesson_Chosen(state_lessons, state_llms, confirm_dialog, metas, cur_lesson)
+                    Tab_Lesson_Chosen(
+                        state_lessons, 
+                        state_llms, 
+                        confirm_dialog, 
+                        metas, 
+                        cur_lesson,
+                        lesson_gen_info_dialog,
+                    )

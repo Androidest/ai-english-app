@@ -1,5 +1,6 @@
 import gradio as gr
 from app.ui.dialogs.confirm_dialog import ConfirmDialog
+from app.ui.dialogs.lesson_gen_info_dialog import LessonGenInfoDialog
 from app.ui.models.cache import Cache
 from app.ui.models.meta import Meta
 from app.ui.states.state_llms import State_LLMs
@@ -18,6 +19,7 @@ class Tab_Lesson_Chosen:
             confirm_dialog: ConfirmDialog, 
             metas:dict[str, Meta], 
             cur_lesson:str,
+            lesson_gen_info_dialog: LessonGenInfoDialog,
         ):
 
         self.state_lessons = state_lessons
@@ -59,6 +61,9 @@ class Tab_Lesson_Chosen:
                     gr.Markdown(f"{meta.name}", scale=1, elem_classes=["lesson-title", "fav-title" ])
                 else:
                     gr.Markdown(f"{meta.name}", scale=1, elem_classes=["lesson-title"])
+
+                gr.Textbox(f"Learning: {meta.gen_params.source_language}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
+                gr.Textbox(f"Difficulty: {meta.gen_params.difficulty}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
                 gr.Textbox(f"Page: {progress_idx+1}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
                 gr.Textbox(f"⫶☰ Passed: {meta.correct_count} / {meta.total}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
                 gr.Textbox(f"★ Favourite: {meta.favourite_count}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
@@ -183,7 +188,12 @@ class Tab_Lesson_Chosen:
                             confirm_inputs=[s_cur_meta, s_progress_idx, s_cur_sheet, state_lessons.pending_uppdate_meta], 
                             confirm_outputs=[s_cur_meta, state_lessons.pending_uppdate_meta, s_cur_sheet, s_progress_idx]
                         )
-
+                
+                if not is_FAV_LESSON:
+                    with gr.Column(scale=0, min_width=50):
+                        info_btn = gr.Button("🛈︎")
+                        lesson_gen_info_dialog.attach(info_btn)
+            
             # submit events
             s_words = gr.State(words)
             for input in inputs:

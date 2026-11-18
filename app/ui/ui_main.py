@@ -7,6 +7,7 @@ from app.ui.dialogs.confirm_dialog import ConfirmDialog
 from app.ui.components.tab_ai import Tab_AI
 from app.ui.components.tab_lesson import Tab_Lesson
 from app.ui.dialogs.gen_lesson_dialog import GenLessonDialog
+from app.ui.dialogs.lesson_gen_info_dialog import LessonGenInfoDialog
 
 with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for hot reloading
     
@@ -15,6 +16,7 @@ with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for
 
     confirm_dialog = ConfirmDialog()
     gen_lesson_dialog = GenLessonDialog(state_lessons=state_lessons, state_llms=state_llms)
+    lesson_gen_info_dialog = LessonGenInfoDialog(state_lessons=state_lessons)
 
     with gr.Row():
         with gr.Column(scale=1):
@@ -29,8 +31,17 @@ with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for
                 gr.Textbox(cur_llm_name, elem_classes=["cur-ai"], max_lines=1, scale=0, min_width=200, container=False)
 
     with gr.Row():
-        Tab_Lesson(state_lessons, state_llms, confirm_dialog, gen_lesson_dialog)
-        Tab_AI(state_llms, confirm_dialog)
+        Tab_Lesson(
+            state_lessons, 
+            state_llms, 
+            confirm_dialog, 
+            gen_lesson_dialog, 
+            lesson_gen_info_dialog,
+        )
+        Tab_AI(
+            state_llms, 
+            confirm_dialog
+        )
 
     def on_load():
         outs = state_lessons.load_to_outputs()

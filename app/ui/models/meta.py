@@ -11,6 +11,7 @@ class Meta(BaseModel):
     correct_count: int = Field(default=0)
     favourite_count: int = Field(default=0)
     total: int = Field(default=0)
+    ai_model_name: str = Field(default="Unknown")
 
     gen_params: LessonGenParams = Field(default_factory=LessonGenParams)
 
@@ -22,6 +23,7 @@ class MetaUpdate(TypedDict, total=False):
     correct_count: int
     favourite_count: int
     total: int
+    ai_model_name: str
 
     gen_params: LessonGenParams
 
