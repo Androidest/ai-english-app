@@ -1,7 +1,7 @@
 import gradio as gr
-from app.ui.confirm_dialog import ConfirmDialog
-from app.ui.state_llms import State_LLMs
-from app.ui.state_lessons import State_Lessons, FAV_LESSON, Meta, Cache
+from app.ui.dialogs.confirm_dialog import ConfirmDialog
+from app.ui.states.state_llms import State_LLMs
+from app.ui.states.state_lessons import State_Lessons, FAV_LESSON, Meta, Cache
 from app.utils.sheet import Sheet
 
 ERROR_TEMPLATE = "<span style='color: #e39696; font-size: 18px;'>{msg}</span>"

@@ -1,12 +1,12 @@
 import gradio as gr
 
-from app.ui.state_llms import State_LLMs
-from app.ui.state_lessons import State_Lessons
+from app.ui.states.state_llms import State_LLMs
+from app.ui.states.state_lessons import State_Lessons
 
-from app.ui.confirm_dialog import ConfirmDialog
-from app.ui.tab_ai import Tab_AI
-from app.ui.tab_lesson import Tab_Lesson
-from app.ui.gen_lesson_dialog import GenLessonDialog
+from app.ui.dialogs.confirm_dialog import ConfirmDialog
+from app.ui.components.tab_ai import Tab_AI
+from app.ui.components.tab_lesson import Tab_Lesson
+from app.ui.dialogs.gen_lesson_dialog import GenLessonDialog
 
 with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for hot reloading
     

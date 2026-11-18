@@ -1,9 +1,9 @@
 import gradio as gr
 import asyncio
 
-from app.ui.state_lessons import State_Lessons, FAV_LESSON, Meta, Cache
-from app.ui.state_llms import State_LLMs
-from app.ui.progress_bar import ProgressBar
+from app.ui.states.state_lessons import State_Lessons, FAV_LESSON, Meta, Cache
+from app.ui.states.state_llms import State_LLMs
+from app.ui.components.progress_bar import ProgressBar
 from app.utils.paths import PATH_LESSONS
 from app.utils.types import Language, CEFRLevel, LANG_OPTIONS
 from app.workflow.schemas.lesson_generation_request import LessonGenerationRequest
