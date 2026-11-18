@@ -32,7 +32,7 @@ class Meta(TypedDict):
     source_max_len: int
     topic: str
     difficulty: CEFRLevel
-    pages: int
+    target_count: int
     display_languages: list[CEFRLevel]
     batch_size: int
     max_concurrency: int
@@ -45,7 +45,7 @@ class Cache(TypedDict):
     source_max_len: int
     topic: str
     difficulty: CEFRLevel
-    pages: int
+    target_count: int
     display_language_1: LANG_OPTIONS
     display_language_2: LANG_OPTIONS
     batch_size: int
@@ -99,7 +99,7 @@ class State_Lessons:
             source_max_len = 100,
             topic = "Anything",
             difficulty = "A1",
-            pages = 10,
+            target_count = 10,
             display_language_1 = "--",
             display_language_2 = "--",
             batch_size = 5,
@@ -352,7 +352,7 @@ class State_Lessons:
             source_max_len=0,
             topic="--",
             difficulty="--",
-            pages=-1,
+            target_count=-1,
             display_languages=[],
             batch_size=-1,
             max_concurrency=-1,

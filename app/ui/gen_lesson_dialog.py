@@ -65,7 +65,7 @@ class GenLessonDialog:
                         min_width=80,
                     )
 
-                    pages = gr.Number(
+                    target_count = gr.Number(
                         10, 
                         label="Pages", 
                         precision=0,
@@ -124,7 +124,7 @@ class GenLessonDialog:
                     source_max_len,
                     topic,
                     difficulty,
-                    pages,
+                    target_count,
                     display_language_1,
                     display_language_2,
                     batch_size,
@@ -196,7 +196,7 @@ class GenLessonDialog:
                 gr.update(value=cache["source_max_len"]),
                 gr.update(value=cache["topic"]),
                 gr.update(value=cache["difficulty"]),
-                gr.update(value=cache["pages"]),
+                gr.update(value=cache["target_count"]),
                 gr.update(value=cache["display_language_1"]),
                 gr.update(value=cache["display_language_2"]),
                 gr.update(value=cache["batch_size"]),
@@ -225,7 +225,7 @@ class GenLessonDialog:
         source_max_len: int, #
         topic: str, #
         difficulty: CEFRLevel, #
-        pages: int, #
+        target_count: int, #
         display_language_1 :Language, #
         display_language_2 :Language, #
         batch_size: int = 10, 
@@ -268,7 +268,7 @@ class GenLessonDialog:
         elif difficulty not in CEFRLevel.__args__:
             error = ERROR_TEMPLATE.format(msg="Difficulty is required!")
 
-        elif pages <= 0 or pages == None:
+        elif target_count <= 0 or target_count == None:
             error = ERROR_TEMPLATE.format(msg="Pages should be a number bigger than 0.")
 
         elif not display_languages:
@@ -288,7 +288,7 @@ class GenLessonDialog:
             print(f"Lesson Name: {name}")
             print(f"Source Language: {source_language}")
             print(f"Source Max Len: {source_max_len}")
-            print(f"Pages: {pages}")
+            print(f"Pages: {target_count}")
             print(f"Topic: {topic}")
             print(f"Difficulty: {difficulty}")
             print(f"Display Languages: {display_languages}")
@@ -300,7 +300,7 @@ class GenLessonDialog:
                 source_max_len = source_max_len,
                 topic = topic,
                 difficulty = difficulty,
-                pages = pages,
+                target_count = target_count,
                 display_language_1 = display_language_1,
                 display_language_2 = display_language_2,
                 batch_size = batch_size,
@@ -315,7 +315,7 @@ class GenLessonDialog:
                     source_max_len = source_max_len,
                     topic = topic,
                     difficulty = difficulty,
-                    target_count = pages,
+                    target_count = target_count,
                     translation_languages=display_languages,
                     batch_size = batch_size,
                     max_concurrency = max_concurrency,
@@ -329,7 +329,7 @@ class GenLessonDialog:
                 )
 
                 cur_processed = 0
-                total = pages * (1 + len(display_languages)) * 2 + 1 
+                total = target_count * (1 + len(display_languages)) * 2 + 1 
                 async for data in iterator:
                     cur_processed += data["processed_count"]
                     print(data)
@@ -353,7 +353,7 @@ class GenLessonDialog:
                 new_meta["source_max_len"] = source_max_len
                 new_meta["topic"] = topic
                 new_meta["difficulty"] = difficulty
-                new_meta["pages"] = pages
+                new_meta["target_count"] = target_count
                 new_meta["display_languages"] = display_languages
                 new_meta["batch_size"] = batch_size
                 new_meta["max_concurrency"] = max_concurrency
