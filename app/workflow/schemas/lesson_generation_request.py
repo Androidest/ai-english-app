@@ -7,16 +7,16 @@ SOURCE_MAX_LENGTH_TOLERANCE = 25
 class LessonGenerationRequest(BaseModel):
     """Public input of the multilingual lesson generation workflow."""
 
-    source_language: Language
-    source_max_len: int = 300
-    topic: str
-    difficulty: CEFRLevel = "A1"
-    target_count: int = Field(ge=1, le=500)
+    source_language: Language = Field(default=Language.__args__[0])
+    source_max_len: int = Field(ge=SOURCE_MAX_LENGTH_TOLERANCE+10, le=300, default=100)
+    topic: str = Field(min_length=1)
+    difficulty: CEFRLevel  = Field(default=CEFRLevel.__args__[0])
+    target_count: int = Field(ge=1, le=500, default=10)
 
-    translation_languages :list[Language]
+    translation_languages :list[Language] = Field(min_length=1)
     
-    batch_size: int = 10
-    max_concurrency: int = 10
+    batch_size: int = Field(ge=1, le=50, default=5)
+    max_concurrency: int = Field(ge=1, le=50, default=20)
 
     def get_src_max_len_for_prompt(self):
 
