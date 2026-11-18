@@ -28,3 +28,5 @@ Language = Literal[
 ]
 
 LANG_OPTIONS = Literal["--", Language]
+
+SORTING_OPTIONS = Literal["Z → A", "A → Z", "latest", "oldest"]

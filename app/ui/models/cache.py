@@ -1,17 +1,19 @@
+from pydantic import BaseModel, Field
 from typing import TypedDict
 
-from app.utils.types import LANG_OPTIONS, CEFRLevel, Language
+from app.ui.models.lesson_gen_params import LessonGenParams
+from app.utils.types import SORTING_OPTIONS
 
-class Cache(TypedDict):
-    cur_lesson: int
-    cur_sort_by: str
-    # gen lesson dialog input cache
-    source_language: Language
-    source_max_len: int
-    topic: str
-    difficulty: CEFRLevel
-    target_count: int
-    display_language_1: LANG_OPTIONS
-    display_language_2: LANG_OPTIONS
-    batch_size: int
-    max_concurrency: int
+class Cache(BaseModel):
+    cur_lesson: str = Field(default="")
+    cur_sort_by: SORTING_OPTIONS = Field(default='latest')
+    
+    gen_params: LessonGenParams = Field(default_factory=LessonGenParams)
+
+class CacheUpdate(TypedDict, total=False):
+    cur_lesson: str
+    cur_sort_by: SORTING_OPTIONS
+
+    gen_params: LessonGenParams  
+
+assert set(CacheUpdate.__annotations__) == set(Cache.model_fields)

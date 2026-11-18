@@ -4,7 +4,8 @@ from app.ui.models.meta import Meta
 from app.ui.states.state_llms import State_LLMs
 from app.ui.states.state_lessons import (
     State_Lessons, 
-    SORT_ALPHA_A_Z, SORT_ALPHA_Z_A, SORT_LATEST, SORT_OLDEST, FAV_LESSON
+    SORTING_OPTIONS, 
+    FAV_LESSON,
 )
 from app.ui.dialogs.gen_lesson_dialog import GenLessonDialog
 
@@ -25,18 +26,18 @@ class Tab_Lesson_List:
                 with gr.Row(scale=0, elem_classes=["sort-buttons-bar"]): # if using row, @gr.render will copy a new row inside
                     @gr.render(inputs=[state_lessons.sort_by])
                     def render_tab(sort_by: str): 
-                        types = [SORT_LATEST, SORT_OLDEST, SORT_ALPHA_A_Z, SORT_ALPHA_Z_A]
+                        types = SORTING_OPTIONS.__args__
 
-                        for i, v in enumerate(types):
-                            style_active = "sort-btn-active" if v == sort_by else "sort-btn-inactive"
+                        for i, option in enumerate(types):
+                            style_active = "sort-btn-active" if option == sort_by else "sort-btn-inactive"
                             style_pos = 'sort-btn-mid'
                             if i == 0:
                                 style_pos = 'sort-btn-left'
                             elif i == len(types) - 1:
                                 style_pos = 'sort-btn-right'
                         
-                            b = gr.Button(v, scale=0, elem_classes=["sort-btn", style_active, style_pos], min_width=80) 
-                            b.click(self.on_click_sort_by, inputs=[gr.State(v)], outputs=[state_lessons.sort_by])
+                            b = gr.Button(value=option, scale=0, elem_classes=["sort-btn", style_active, style_pos], min_width=80) 
+                            b.click(self.on_click_sort_by, inputs=[gr.State(option)], outputs=[state_lessons.sort_by])
 
             t = gr.Textbox("", elem_classes=["search-box"], max_lines=1, scale=0, min_width=200, container=False, placeholder="Search")
             t.change(lambda x: x, inputs=[t], outputs=[s_search])
@@ -78,9 +79,9 @@ class Tab_Lesson_List:
                                 inputs=[s_meta],
                                 outputs=[state_lessons.cur_lesson],
                             )
-                        gr.Markdown(f"⫶☰ {meta['correct_count']}/{meta['total']}", elem_classes=["card-meta-passed"], scale=0)
+                        gr.Markdown(f"⫶☰ {meta.correct_count}/{meta.total}", elem_classes=["card-meta-passed"], scale=0)
                         if lesson_name != FAV_LESSON:
-                            gr.Markdown(f"★ {meta['favourite_count']}", elem_classes=["card-meta-favourite"], scale=0)
+                            gr.Markdown(f"★ {meta.favourite_count}", elem_classes=["card-meta-favourite"], scale=0)
 
                         item_btn = gr.Button("", elem_classes=["card-click-button"])
                         item_btn.click(
@@ -95,19 +96,15 @@ class Tab_Lesson_List:
                     gen_lesson_dialog.attach(add_btn)
 
     def on_click_sort_by(self, cur_sort_by: str):
-            self.state_lessons.save_cache(
-                cache=Cache( 
-                    cur_sort_by = cur_sort_by
-                )
-            )
-            return cur_sort_by
+        self.state_lessons.save_cache(
+            cur_sort_by = cur_sort_by,
+        )
+        return cur_sort_by
 
     def on_choose_lesson(self, meta: Meta) -> tuple:
-        lesson_name = meta["name"]
+        lesson_name = meta.name
         print(f"Choose lesson: {lesson_name}")
         self.state_lessons.save_cache(
-            cache=Cache(
-                cur_lesson=lesson_name,
-            )
+            cur_lesson = lesson_name,
         )
         return lesson_name
