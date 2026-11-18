@@ -61,9 +61,9 @@ class Tab_Lesson_Chosen:
                     gr.Markdown(f"{meta.name}", scale=1, elem_classes=["lesson-title", "fav-title" ])
                 else:
                     gr.Markdown(f"{meta.name}", scale=1, elem_classes=["lesson-title"])
-
-                gr.Textbox(f"Learning: {meta.gen_params.source_language}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
-                gr.Textbox(f"Difficulty: {meta.gen_params.difficulty}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
+                    gr.Textbox(f"Learning: {meta.gen_params.source_language}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
+                    gr.Textbox(f"Difficulty: {meta.gen_params.difficulty}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
+                
                 gr.Textbox(f"Page: {progress_idx+1}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
                 gr.Textbox(f"⫶☰ Passed: {meta.correct_count} / {meta.total}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
                 gr.Textbox(f"★ Favourite: {meta.favourite_count}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
