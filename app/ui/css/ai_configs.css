@@ -1,5 +1,6 @@
+.ai-input-editing textarea,
 .ai-input-editing .secondary-wrap {
-    z-index: 100;
+    z-index: 101;
 }
 
 .ai-input-editing {
@@ -49,13 +50,13 @@
     height: stretch !important;
 }
 
-.ai-row-click-button {
+.ai-slot-click-button {
     position: absolute !important;
     inset: 0 !important;
     width: calc(100% - 60px) !important;
     height: 100% !important;
     opacity: 0 !important;
-    z-index: 1 !important;
+    z-index: 100 !important;
 }
 
 .ai-clickable-item {
@@ -65,4 +66,8 @@
 
 .ai-clickable-item:hover {
     background-color:#e5e6ef;
+}
+
+#ai-small-btn {
+    z-index: 101 !important;
 }

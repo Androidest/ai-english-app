@@ -43,7 +43,7 @@ class Tab_AI:
                     with gr.Row(variant="panel", elem_classes=item_row_classes):
     
                         # invisible button to trigger click event for the entire item card
-                        row_click = gr.Button("", elem_classes=["ai-row-click-button"])
+                        row_click = gr.Button("", elem_classes=["ai-slot-click-button"])
                         row_click.click(
                             self.on_click_item,
                             inputs=[gr.State(idx), state_llms.configs, state_llms.cur_llm],
@@ -84,21 +84,21 @@ class Tab_AI:
                         with gr.Column(scale=0, min_width=60, elem_classes=item_btn_panel_classes):
                             if not is_selected:
                                 if is_editing:
-                                    confirm_btn = gr.Button("✅", elem_classes="ai-confirm-editing")
+                                    confirm_btn = gr.Button("✅", elem_classes="ai-confirm-editing", elem_id="ai-small-btn")
                                     confirm_btn.click(
                                         self.on_confirm_edit, 
                                         inputs=[gr.State(idx), provider_in, alias_in, model_in, base_url_in, api_key_in, state_llms.configs],
                                         outputs=[state_llms.configs]
                                     )
     
-                                    del_btn = gr.Button("↩", variant="secondary")
+                                    del_btn = gr.Button("↩", variant="secondary", elem_id="ai-small-btn")
                                     del_btn.click(
                                         self.on_cancel_edit, 
                                         inputs=[gr.State(idx), state_llms.configs], 
                                         outputs=[state_llms.configs],
                                     ) 
                                 else:
-                                    edit_btn = gr.Button("✏️", variant="secondary")
+                                    edit_btn = gr.Button("✏️", variant="secondary", elem_id="ai-small-btn")
                                     edit_btn.click(
                                         self.on_click_edit, 
                                         inputs=[gr.State(idx), state_llms.configs], 
@@ -106,7 +106,7 @@ class Tab_AI:
                                     )
     
                                     # both have delete button
-                                    del_btn = gr.Button("⛔")
+                                    del_btn = gr.Button("⛔", elem_id="ai-small-btn")
                                     confirm_dialog.attach(
                                             del_btn,
                                             
