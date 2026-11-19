@@ -16,8 +16,10 @@ if __name__ == "__main__":
     set_config(args.env)
     from app.utils.config import config
 
-    with open(PATH_CSS, "r", encoding="utf-8") as f:
-        external_css = f.read()
+    css_paths = [
+        file_path
+        for file_path in PATH_CSS.rglob(f"*.css")
+    ]
 
     with open(PATH_JS, "r", encoding="utf-8") as f:
         external_js = f.read()
@@ -27,7 +29,7 @@ if __name__ == "__main__":
         server_name=config.HOST, 
         server_port=config.PORT, 
         inbrowser=True,
-        css=external_css,
+        css_paths=css_paths,
         js=external_js,
         share=config.SHARE,
     )

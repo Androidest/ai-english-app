@@ -33,17 +33,17 @@ class Tab_AI:
                     is_selected = idx == cur_llm
     
                     # css classes for item card and button panel
-                    item_row_classes = ["unselected-item", "clickable-item"]
-                    item_btn_panel_classes = ["unselected-item", "col-vert-center"]
+                    item_row_classes = ["ai-deselected-item", "ai-clickable-item"]
+                    item_btn_panel_classes = ["ai-deselected-item", "ai-col-vert-center"]
                     if is_selected:
-                        item_row_classes = ["selected-item"]
-                        item_btn_panel_classes = ["selected-item-bg", "col-vert-center"]
+                        item_row_classes = ["ai-selected-item"]
+                        item_btn_panel_classes = ["ai-selected-item-bg", "ai-col-vert-center"]
     
                     # item card for each llm config
                     with gr.Row(variant="panel", elem_classes=item_row_classes):
     
                         # invisible button to trigger click event for the entire item card
-                        row_click = gr.Button("", elem_classes=["row-click-button"])
+                        row_click = gr.Button("", elem_classes=["ai-row-click-button"])
                         row_click.click(
                             self.on_click_item,
                             inputs=[gr.State(idx), state_llms.configs, state_llms.cur_llm],
@@ -51,8 +51,8 @@ class Tab_AI:
                         )
     
                         # radio circle to display the selected item
-                        with gr.Column(scale=0, min_width=60, elem_classes="col-vert-center"):
-                            class_name = "radio-circle selected" if is_selected else "radio-circle"
+                        with gr.Column(scale=0, min_width=60, elem_classes="ai-col-vert-center"):
+                            class_name = "ai-radio-circle selected" if is_selected else "ai-radio-circle"
                             gr.HTML(
                                 value=f'<div class="{class_name}" data-row="{idx}"></div>',
                                 elem_id=f"circle_{idx}"
@@ -63,11 +63,11 @@ class Tab_AI:
                             with gr.Row():
                                 # editing mode
                                 if is_editing:
-                                    alias_in = gr.Textbox(value=alias, label="Alias", elem_classes="input-editing", interactive=True)
-                                    provider_in = gr.Dropdown(choices=ProviderType.__args__, value=provider, label="Provider", elem_classes=["input-editing"], interactive=True)
-                                    model_in = gr.Textbox(value=model, label="Model", elem_classes="input-editing", interactive=True)
-                                    base_url_in = gr.Textbox(value=base_url, label="Base URL", elem_classes="input-editing", interactive=True)
-                                    api_key_in = gr.Textbox(value=api_key, label="API Key", elem_classes="input-editing", interactive=True)
+                                    alias_in = gr.Textbox(value=alias, label="Alias", elem_classes="ai-input-editing", interactive=True)
+                                    provider_in = gr.Dropdown(choices=ProviderType.__args__, value=provider, label="Provider", elem_classes=["ai-input-editing"], interactive=True)
+                                    model_in = gr.Textbox(value=model, label="Model", elem_classes="ai-input-editing", interactive=True)
+                                    base_url_in = gr.Textbox(value=base_url, label="Base URL", elem_classes="ai-input-editing", interactive=True)
+                                    api_key_in = gr.Textbox(value=api_key, label="API Key", elem_classes="ai-input-editing", interactive=True)
                                 
                                 # non-edit mode
                                 else: 
@@ -84,7 +84,7 @@ class Tab_AI:
                         with gr.Column(scale=0, min_width=60, elem_classes=item_btn_panel_classes):
                             if not is_selected:
                                 if is_editing:
-                                    confirm_btn = gr.Button("✅", elem_classes="confirm-editing")
+                                    confirm_btn = gr.Button("✅", elem_classes="ai-confirm-editing")
                                     confirm_btn.click(
                                         self.on_confirm_edit, 
                                         inputs=[gr.State(idx), provider_in, alias_in, model_in, base_url_in, api_key_in, state_llms.configs],

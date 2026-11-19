@@ -1,0 +1,31 @@
+.cur-ai {
+    margin-top: 5px;
+    height: 37px;
+    border-radius: 8px;
+    border-width: 2px;
+    min-width: fit-content !important;
+}
+
+.cur-ai::before {
+  content: "Current AI ";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #999;
+  font-size: 16px;
+  z-index: 1;
+  border-right: 2px solid #ececec;
+  padding-right: 10px;
+}
+
+.cur-ai input {
+    margin-left: 90px;
+    color: #2e2e2f !important;
+    font-size: 16px;
+    font-weight: normal;
+    height: 37px;
+    text-align: left;
+    field-sizing: content;
+}

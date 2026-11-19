@@ -29,7 +29,6 @@ class Tab_Lesson:
                 if cur_lesson == "":
                     Tab_Lesson_List(
                         state_lessons, 
-                        state_llms, 
                         gen_lesson_dialog
                     )
                 else:

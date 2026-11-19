@@ -1,0 +1,68 @@
+.ai-input-editing .secondary-wrap {
+    z-index: 100;
+}
+
+.ai-input-editing {
+    background-color: #c1e9f5;
+}
+
+.ai-confirm-editing {
+    background-color: #c1e9f5;
+}
+
+.ai-selected-item {
+    background-color: #eeeeee;
+    border: 2px solid #2196F3;
+}
+
+.ai-selected-item-bg {
+    background-color: #f1f1f1;
+}
+
+.ai-deselected-item {
+    background-color: #f1f1f1;
+    border: 2px solid #f1f1f1;
+}
+
+.ai-radio-circle {
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+    border: 2px solid #666;
+    cursor: pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+.ai-radio-circle.selected::after {
+    content:'';
+    width:11px;
+    height:11px;
+    border-radius:50%;
+    background:#2196F3;
+}
+
+.ai-col-vert-center {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    height: stretch !important;
+}
+
+.ai-row-click-button {
+    position: absolute !important;
+    inset: 0 !important;
+    width: calc(100% - 60px) !important;
+    height: 100% !important;
+    opacity: 0 !important;
+    z-index: 1 !important;
+}
+
+.ai-clickable-item {
+    cursor: pointer;
+    border-radius:6px;
+}
+
+.ai-clickable-item:hover {
+    background-color:#e5e6ef;
+}

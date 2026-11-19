@@ -488,17 +488,17 @@ class State_Lessons:
         self, 
         lessons: dict[str, Meta], 
         sort_by: SORTING_OPTIONS
-    ) -> list[(str|float, dict[str, Meta])]:
+    ) -> list[Meta]:
         
         if sort_by == "latest":
-            return sorted(lessons.items(), key=lambda item: item[1].time_created, reverse=True)
+            return sorted(lessons.values(), key=lambda i: i.time_created, reverse=True)
         elif sort_by == "oldest":
-            return sorted(lessons.items(), key=lambda item: item[1].time_created)
+            return sorted(lessons.values(), key=lambda i: i.time_created)
         elif sort_by == "A → Z":
-            return sorted(lessons.items(), key=lambda item: item[0])
+            return sorted(lessons.values(), key=lambda i: i.name)
         elif sort_by == "Z → A":
-            return sorted(lessons.items(), key=lambda item: item[0], reverse=True)
-        return lessons.items()
+            return sorted(lessons.values(), key=lambda i: i.name, reverse=True)
+        return lessons.values()
     
     def filter_lessons(
         self, 
@@ -512,7 +512,26 @@ class State_Lessons:
             return { 
                 k: v 
                 for k, v in lessons.items() 
-                if search in k or search in v["name"] 
+                if search in k or search in v.name
             }
 
+    def reorganize_lessons(self, lessons, sort_by, search):
+        # search lessons
+        filtered_lessons = self.filter_lessons(lessons, search)
+
+        # cache the Favourite lesson
+        fav_meta = None
+        if FAV_LESSON in filtered_lessons:
+            fav_meta = filtered_lessons[FAV_LESSON]
+            filtered_lessons = { k:v for k,v in filtered_lessons.items() if k != FAV_LESSON }
+
+        # sort lessons
+        sorted_lessons = self.sort_lessons(filtered_lessons, sort_by)
+
+        # put the Favourite at the start of the list
+        if fav_meta != None:
+            sorted_lessons.insert(0, fav_meta)
+
+        return sorted_lessons
+    
     # endregion Misc Functions

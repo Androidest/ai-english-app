@@ -13,15 +13,16 @@ class Tab_Lesson_List:
     def __init__(
             self, 
             state_lessons: State_Lessons, 
-            state_llms: State_LLMs,
             gen_lesson_dialog: GenLessonDialog,
         ):
 
         self.state_lessons = state_lessons
         s_search = gr.State(value="")
         
-        # sorting bar
+        # Sorting and search bar
         with gr.Row(scale=0, elem_classes=["sort-buttons-bar"]):
+
+            # Sorting
             with gr.Column(scale=0): # using column to limit the width
                 with gr.Row(scale=0, elem_classes=["sort-buttons-bar"]): # if using row, @gr.render will copy a new row inside
                     @gr.render(inputs=[state_lessons.sort_by])
@@ -39,6 +40,7 @@ class Tab_Lesson_List:
                             b = gr.Button(value=option, scale=0, elem_classes=["sort-btn", style_active, style_pos], min_width=80) 
                             b.click(self.on_click_sort_by, inputs=[gr.State(option)], outputs=[state_lessons.sort_by])
 
+            # Search box
             t = gr.Textbox("", elem_classes=["search-box"], max_lines=1, scale=0, min_width=200, container=False, placeholder="Search")
             t.change(lambda x: x, inputs=[t], outputs=[s_search])
         
@@ -47,52 +49,49 @@ class Tab_Lesson_List:
         def render_tab(lessons: dict[str, Meta], sort_by: str, search: str):
             with gr.Row():
 
-                # search lessons
-                filtered_lessons = state_lessons.filter_lessons(lessons, search)
+                # Reorganize lessons, including sorting and filtering
+                sorted_lessons = state_lessons.reorganize_lessons(
+                    lessons,
+                    sort_by, 
+                    search,
+                )
 
-                # cache the Favourite lesson
-                fav_meta = None
-                if FAV_LESSON in filtered_lessons:
-                    fav_meta = filtered_lessons[FAV_LESSON]
-                    filtered_lessons = { k:v for k,v in filtered_lessons.items() if k != FAV_LESSON }
-
-                # sort lessons
-                sorted_lessons = state_lessons.sort_lessons(filtered_lessons, sort_by)
-
-                # put the Favourite at the start of the list
-                if fav_meta != None:
-                    sorted_lessons.insert(0, (FAV_LESSON, fav_meta))
-
-                for lesson_name, meta in sorted_lessons:
+                # Iterate through all lessons and display them as cards
+                for meta in sorted_lessons:
                     s_meta = gr.State(meta)
+                    lesson_name = meta.name
 
-                    with gr.Column(variant="panel", elem_classes=["clickable-item", "card-item", "card-item-bg"], scale=0):
-                        # invisible button to trigger click event for the entire item card
+                    # Card item
+                    with gr.Column(variant="panel", elem_id="card-item", scale=0):
+
+                        # Difficulty on the top right.
+                        if lesson_name != FAV_LESSON:
+                            gr.HTML(value=f'{meta.gen_params.difficulty}', elem_id=f"card-difficulty-{meta.gen_params.difficulty}")
+                        
+                        # Card title = lesson name
                         with gr.Row(scale=0, elem_classes=["card-name-wrapper"]):
                             if lesson_name != FAV_LESSON:
                                 gr.Markdown(lesson_name, elem_classes=["card-name"], scale=0, line_breaks=True)
                             else:
                                 gr.Markdown(f"<span style='font-size:30px;'>🌟</span><br>{lesson_name}", elem_classes=["card-name"], scale=0, line_breaks=True)
-                            item_btn1 = gr.Button("", elem_classes=["card-click-button"])
-                            item_btn1.click(
-                                self.on_choose_lesson,
-                                inputs=[s_meta],
-                                outputs=[state_lessons.cur_lesson],
-                            )
-                        gr.Markdown(f"⫶☰ {meta.correct_count}/{meta.total}", elem_classes=["card-meta-passed"], scale=0)
-                        if lesson_name != FAV_LESSON:
-                            gr.Markdown(f"★ {meta.favourite_count}", elem_classes=["card-meta-favourite"], scale=0)
 
-                        item_btn = gr.Button("", elem_classes=["card-click-button"])
+                        # Meta information
+                        gr.Markdown(f"{meta.gen_params.source_language}", elem_id="card-meta-lang", scale=0)
+                        gr.Markdown(f"⫶☰ {meta.correct_count}/{meta.total}", elem_id="card-meta-inf", scale=0)
+                        if lesson_name != FAV_LESSON:
+                            gr.Markdown(f"★ {meta.favourite_count}", elem_id="card-meta-fav", scale=0)
+
+                        # An invisible button covers the entire card to trigger the card's click event.
+                        item_btn = gr.Button("", elem_id="card-click-button")
                         item_btn.click(
                             self.on_choose_lesson,
                             inputs=[s_meta],
                             outputs=[state_lessons.cur_lesson],
                         )
 
-                with gr.Column(variant="panel", elem_classes=["card-item"], scale=0):
-                    # the last item is the add button
-                    add_btn = gr.Button("➕", variant="secondary", elem_classes=["card-item"]) 
+                # "+": The add button. The last item of the list 
+                with gr.Column(variant="panel", elem_id="card-item-fav", scale=0):
+                    add_btn = gr.Button("➕", variant="secondary", elem_id="card-click-button-fav") 
                     gen_lesson_dialog.attach(add_btn)
 
     def on_click_sort_by(self, cur_sort_by: str):
