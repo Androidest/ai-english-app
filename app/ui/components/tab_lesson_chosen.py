@@ -1,4 +1,7 @@
 import gradio as gr
+import random
+import asyncio
+
 from app.ui.dialogs.confirm_dialog import ConfirmDialog
 from app.ui.dialogs.lesson_gen_info_dialog import LessonGenInfoDialog
 from app.ui.models.cache import Cache
@@ -155,6 +158,10 @@ class Tab_Lesson_Chosen:
             msg = gr.Markdown(PASSED_MSG if is_passed else "", scale=0, elem_classes=["tip-msg"])
 
             with gr.Row(min_height=10, elem_classes=["button-bar"]):
+                if not is_FAV_LESSON:
+                    with gr.Column(scale=0, min_width=50):
+                        info_btn = gr.Button("🛈︎")
+                        lesson_gen_info_dialog.attach(info_btn)
                 with gr.Column(scale=0, min_width=50):
                     btn = gr.Button("↺")
                     btn.click(self.on_click_restart, inputs=[s_cur_meta], outputs=[s_cur_meta])
@@ -188,14 +195,21 @@ class Tab_Lesson_Chosen:
                             confirm_inputs=[s_cur_meta, s_progress_idx, s_cur_sheet, state_lessons.pending_uppdate_meta], 
                             confirm_outputs=[s_cur_meta, state_lessons.pending_uppdate_meta, s_cur_sheet, s_progress_idx]
                         )
-                
-                if not is_FAV_LESSON:
-                    with gr.Column(scale=0, min_width=50):
-                        info_btn = gr.Button("🛈︎")
-                        lesson_gen_info_dialog.attach(info_btn)
+
+                with gr.Column(scale=0, min_width=50):
+                    hint = gr.Button("💡")
+
+            s_words = gr.State(words)
+
+            # hint
+            hint.click(
+                self.on_click_hint,
+                inputs=[s_words, *inputs],
+                outputs=[hint, *inputs],
+                show_progress="hidden",
+            )
             
             # submit events
-            s_words = gr.State(words)
             for input in inputs:
                 input.submit(
                     self.on_click_submit, 
@@ -327,3 +341,34 @@ class Tab_Lesson_Chosen:
         meta = self.state_lessons.reset_meta(meta)
         meta = self.state_lessons.save_meta(meta)
         return meta
+
+    async def on_click_hint(
+        self, 
+        words: str, 
+        *inputs: str,
+    ):
+        candidate = []
+        for i, (_w, _i) in enumerate(zip(words, inputs)):
+            if _w != _i:
+                candidate.append((i, _w))
+
+        chosen = random.sample(candidate, 3)
+        out_inputs = [ gr.update(interactive=False) ] * len(inputs)
+        for (i, _w) in chosen:
+            out_inputs[i] = gr.update(value=_w, interactive=False, elem_id="word-wrapper")
+
+        yield (
+            gr.update(interactive=False), 
+            *out_inputs,
+        )
+
+        await asyncio.sleep(3)
+
+        out_inputs = []
+        for i, _i in enumerate(inputs):
+            out_inputs.append(gr.update(value=_i, interactive=True, elem_id=""))
+
+        yield (
+            gr.update(interactive=True), 
+            *out_inputs,
+        )

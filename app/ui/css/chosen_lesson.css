@@ -91,6 +91,11 @@
     gap: 10px;
 }
 
+#word-wrapper input {
+    background-color: #ffae67 !important;
+    color: #000 !important;
+}
+
 .word {
     border: 0 !important;
 }
