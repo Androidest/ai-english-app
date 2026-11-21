@@ -213,13 +213,13 @@ class Tab_Lesson_Chosen:
             for input in inputs:
                 input.submit(
                     self.on_click_submit, 
-                    inputs=[s_cur_meta, s_progress_idx, s_words] + inputs, 
+                    inputs=[s_cur_meta, s_progress_idx, msg, s_words, *inputs], 
                     outputs=[s_cur_meta, msg]
                 )
                 
             submit_btn.click(
                 self.on_click_submit, 
-                inputs=[s_cur_meta, s_progress_idx, s_words] + inputs, 
+                inputs=[s_cur_meta, s_progress_idx, msg, s_words, *inputs], 
                 outputs=[s_cur_meta, msg]
             )
 
@@ -265,7 +265,7 @@ class Tab_Lesson_Chosen:
         meta = self.state_lessons.save_meta(meta)
         return meta
 
-    def on_click_submit(self, meta: Meta, progress_idx: int, words: list[str], *inputs):
+    def on_click_submit(self, meta: Meta, progress_idx: int, old_msg: str, words: list[str], *inputs):
         message = ""
         incorrect_count = 0
         case_incorrect_count = 0
@@ -292,17 +292,23 @@ class Tab_Lesson_Chosen:
                 message += ERROR_TEMPLATE.format(msg=f"{incorrect_count} words are incorrect.")
 
         if message == "":
-            message = PASSED_MSG
             new_meta = meta.model_copy()
-            new_meta = self.state_lessons.set_pass_phrase(new_meta, progress_idx, True)
-            new_meta = self.state_lessons.make_brief_meta(new_meta)
-            new_meta = self.state_lessons.save_meta(new_meta)
-            return new_meta, message
+            if old_msg != PASSED_MSG:
+                message = PASSED_MSG
+                new_meta = self.state_lessons.set_pass_phrase(new_meta, progress_idx, True)
+                new_meta = self.state_lessons.make_brief_meta(new_meta)
+                new_meta = self.state_lessons.save_meta(new_meta)
+                return new_meta, message
+            else:
+                # If this page is already passed, this `submit` will switch to the next page.   
+                new_meta = self.state_lessons.update_progress(new_meta, progress_idx + 1)
+                new_meta = self.state_lessons.save_meta(new_meta)
+                return new_meta, gr.skip()
 
         return meta, message
 
     def on_click_favourite_origin(self, origin_meta: Meta, progress_idx: int, sheet: Sheet, pendind_update_meta: tuple):
-        origin_meta = origin_meta.copy()
+        origin_meta = origin_meta.model_copy()
         if not self.state_lessons.is_phrase_favourite(origin_meta, progress_idx):
             self.state_lessons.save_favourite(
                 val=sheet[progress_idx].to_dict(),
@@ -322,7 +328,7 @@ class Tab_Lesson_Chosen:
         return origin_meta, pendind_update_meta
 
     def on_delete_favourite(self, fav_meta: Meta, progress_idx: int, fav_sheet: Sheet, pendind_update_meta: tuple):
-        fav_meta = fav_meta.copy()
+        fav_meta = fav_meta.model_copy()
         fav_sheet, pending_origin = self.state_lessons.delete_favourite(
             en_key=fav_sheet[progress_idx, "SRC"],
             meta=fav_meta,
@@ -348,14 +354,22 @@ class Tab_Lesson_Chosen:
         *inputs: str,
     ):
         candidate = []
-        for i, (_w, _i) in enumerate(zip(words, inputs)):
-            if _w != _i:
-                candidate.append((i, _w))
+        for i, (word, in_word) in enumerate(zip(words, inputs)):
+            if word != in_word:
+                candidate.append((i, word))
 
-        chosen = random.sample(candidate, 3)
+        if not candidate:
+            yield (
+                gr.update(interactive=True), 
+                *([gr.skip()]*len(inputs)),
+            )
+            return
+
+        chosen_word = random.sample(candidate, 1)
         out_inputs = [ gr.update(interactive=False) ] * len(inputs)
-        for (i, _w) in chosen:
-            out_inputs[i] = gr.update(value=_w, interactive=False, elem_id="word-wrapper")
+        for (i, word) in chosen_word:
+            masked_word = self.state_lessons.random_mask_word(word, mask_ratio=0.6)
+            out_inputs[i] = gr.update(value=masked_word, interactive=False, elem_id="word-wrapper")
 
         yield (
             gr.update(interactive=False), 
@@ -365,8 +379,8 @@ class Tab_Lesson_Chosen:
         await asyncio.sleep(3)
 
         out_inputs = []
-        for i, _i in enumerate(inputs):
-            out_inputs.append(gr.update(value=_i, interactive=True, elem_id=""))
+        for i, in_word in enumerate(inputs):
+            out_inputs.append(gr.update(value=in_word, interactive=True, elem_id=""))
 
         yield (
             gr.update(interactive=True), 

@@ -1,6 +1,7 @@
 from typing import TypedDict, Unpack
 import gradio as gr
 import json
+import random
 
 from app.ui.models.cache import Cache, CacheUpdate
 from app.ui.models.meta import Meta, MetaUpdate
@@ -503,7 +504,7 @@ class State_Lessons:
     def filter_lessons(
         self, 
         lessons: dict[str, Meta], 
-        search: str
+        search: str,
     ) -> dict[str, Meta]:
         
         if search == "":
@@ -515,7 +516,13 @@ class State_Lessons:
                 if search in k or search in v.name
             }
 
-    def reorganize_lessons(self, lessons, sort_by, search):
+    def reorganize_lessons(
+        self,
+        lessons: dict[str, Meta],
+        sort_by: str,
+        search: SORTING_OPTIONS,
+    ) ->  list[Meta]:
+        
         # search lessons
         filtered_lessons = self.filter_lessons(lessons, search)
 
@@ -533,5 +540,29 @@ class State_Lessons:
             sorted_lessons.insert(0, fav_meta)
 
         return sorted_lessons
+
+    def random_mask_word(
+        self, 
+        word: str, 
+        mask_ratio: float = 0.3, 
+        seed: int = None,
+    ):
+        """
+        Randomly mask a word by replacing a fraction of its letters with spaces, 
+        where the fraction is controlled by the `ratio` parameter
+        """
+        if seed is not None:
+            random.seed(seed)
+        
+        chars = list(word)
+        n = len(chars)
+        mask_count = int(n * mask_ratio)  
+        
+        indices = random.sample(range(n), mask_count)
+        for i in indices:
+            chars[i] = '•'
+        
+        return ''.join(chars)
+
     
     # endregion Misc Functions
