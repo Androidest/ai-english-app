@@ -34,6 +34,10 @@ window.updateTextboxes = function (words) {
     for (let i = 0; i < words.length; i++) {
         const container = textboxes[i];
         const input = container.querySelector("input")
+        if(i==0){
+            input.focus()
+        }
+        
         const target_word = words[i];
 
         // Measure the width of the input box according to the given word
