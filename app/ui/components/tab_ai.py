@@ -1,23 +1,23 @@
 import gradio as gr
 from app.workflow._core_.llm_config import LLMConfig
 from app.ui.dialogs.confirm_dialog import ConfirmDialog
-from app.ui.states.state_llms import State_LLMs, PATH_LLMS
+from app.ui.states.state_llm import State_LLM, PATH_LLM
 from app.utils.types import ProviderType
 import time
        
 class Tab_AI:
-    state_llms: State_LLMs
+    state_llm: State_LLM
 
     def __init__(
         self, 
-        state_llms: State_LLMs, 
+        state_llm: State_LLM, 
         confirm_dialog: ConfirmDialog
     ):
-        self.state_llms = state_llms
+        self.state_llm = state_llm
 
         with gr.Tab("AIs") as tab_ai:
             # list of llms
-            @gr.render(inputs=[state_llms.configs, state_llms.cur_llm])
+            @gr.render(inputs=[state_llm.configs, state_llm.cur_llm])
             def render_list(items: list[LLMConfig], cur_llm: int):
                 # render all the llm config items
                 for idx, item in enumerate(items):
@@ -46,8 +46,8 @@ class Tab_AI:
                         row_click = gr.Button("", elem_classes=["ai-slot-click-button"])
                         row_click.click(
                             self.on_click_item,
-                            inputs=[gr.State(idx), state_llms.configs, state_llms.cur_llm],
-                            outputs=[state_llms.cur_llm, state_llms.configs],
+                            inputs=[gr.State(idx), state_llm.configs, state_llm.cur_llm],
+                            outputs=[state_llm.cur_llm, state_llm.configs],
                         )
     
                         # radio circle to display the selected item
@@ -63,19 +63,19 @@ class Tab_AI:
                             with gr.Row():
                                 # editing mode
                                 if is_editing:
-                                    alias_in = gr.Textbox(value=alias, label="Alias", elem_classes="ai-input-editing", interactive=True)
-                                    provider_in = gr.Dropdown(choices=ProviderType.__args__, value=provider, label="Provider", elem_classes=["ai-input-editing"], interactive=True)
-                                    model_in = gr.Textbox(value=model, label="Model", elem_classes="ai-input-editing", interactive=True)
-                                    base_url_in = gr.Textbox(value=base_url, label="Base URL", elem_classes="ai-input-editing", interactive=True)
-                                    api_key_in = gr.Textbox(value=api_key, label="API Key", elem_classes="ai-input-editing", interactive=True)
+                                    alias_in = gr.Textbox(label="Alias", value=alias, elem_classes="ai-input-editing", interactive=True)
+                                    provider_in = gr.Dropdown(label="Provider", value=provider, choices=ProviderType.__args__, elem_classes=["ai-input-editing"], interactive=True)
+                                    model_in = gr.Textbox(label="Model", value=model, elem_classes="ai-input-editing", interactive=True)
+                                    base_url_in = gr.Textbox(label="Base URL", value=base_url, elem_classes="ai-input-editing", interactive=True)
+                                    api_key_in = gr.Textbox(label="API Key", value=api_key, elem_classes="ai-input-editing", interactive=True)
                                 
                                 # non-edit mode
                                 else: 
-                                    gr.Text(value=alias, label="Alias")
-                                    gr.Dropdown(choices=ProviderType.__args__, value=provider, interactive=False)
-                                    gr.Text(value=model, label="Model")
-                                    gr.Text(value=base_url, label="Base URL")
-                                    gr.Text(value=api_key, label="API Key")
+                                    gr.Text(label="Alias", value=alias)
+                                    gr.Dropdown(label="Provider", value=provider, choices=ProviderType.__args__, interactive=False)
+                                    gr.Text(label="Model", value=model)
+                                    gr.Text(label="Base URL", value=base_url)
+                                    gr.Text(label="API Key", value=api_key)
     
                             if error:
                                 gr.Markdown(f'<span style="color:red;">Error: {error}</span>')
@@ -87,22 +87,22 @@ class Tab_AI:
                                     confirm_btn = gr.Button("✅", elem_classes="ai-confirm-editing", elem_id="ai-small-btn")
                                     confirm_btn.click(
                                         self.on_confirm_edit, 
-                                        inputs=[gr.State(idx), provider_in, alias_in, model_in, base_url_in, api_key_in, state_llms.configs],
-                                        outputs=[state_llms.configs]
+                                        inputs=[gr.State(idx), provider_in, alias_in, model_in, base_url_in, api_key_in, state_llm.configs],
+                                        outputs=[state_llm.configs]
                                     )
     
                                     del_btn = gr.Button("↩", variant="secondary", elem_id="ai-small-btn")
                                     del_btn.click(
                                         self.on_cancel_edit, 
-                                        inputs=[gr.State(idx), state_llms.configs], 
-                                        outputs=[state_llms.configs],
+                                        inputs=[gr.State(idx), state_llm.configs], 
+                                        outputs=[state_llm.configs],
                                     ) 
                                 else:
                                     edit_btn = gr.Button("✏️", variant="secondary", elem_id="ai-small-btn")
                                     edit_btn.click(
                                         self.on_click_edit, 
-                                        inputs=[gr.State(idx), state_llms.configs], 
-                                        outputs=[state_llms.configs]
+                                        inputs=[gr.State(idx), state_llm.configs], 
+                                        outputs=[state_llm.configs]
                                     )
     
                                     # both have delete button
@@ -116,8 +116,8 @@ class Tab_AI:
                                             danger=True,
     
                                             confirm_fn=self.on_delete,
-                                            confirm_inputs=[gr.State(idx), state_llms.configs],
-                                            confirm_outputs=[state_llms.configs],
+                                            confirm_inputs=[gr.State(idx), state_llm.configs],
+                                            confirm_outputs=[state_llm.configs],
                                         )
     
                             else:
@@ -126,7 +126,7 @@ class Tab_AI:
     
                 # the last item is the add button
                 add_btn = gr.Button("➕ Add", variant="secondary") 
-                add_btn.click(self.on_add, inputs=[state_llms.configs], outputs=[state_llms.configs])
+                add_btn.click(self.on_add, inputs=[state_llm.configs], outputs=[state_llm.configs])
                 
     def on_click_edit(
         self, 
@@ -176,7 +176,7 @@ class Tab_AI:
         if new_items[i].id == "":
             new_items[i].id = str(int(time.time())) 
 
-        self.state_llms.save_item(new_items[i])
+        self.state_llm.save_item(new_items[i])
 
         new_items[i].editing = False
         new_items[i].error = ""
@@ -203,7 +203,7 @@ class Tab_AI:
         old_items: list[LLMConfig],
     ) -> list[LLMConfig]:
         
-        self.state_llms.delete_item(old_items[i])
+        self.state_llm.delete_item(old_items[i])
         new_items = [i.model_copy() for i in old_items]
         new_items.pop(i)
         return new_items
@@ -238,6 +238,6 @@ class Tab_AI:
             new_items[i].error = "Cannot choose this LLM while editing"
             return old_cur_llm, new_items
 
-        self.state_llms.save_cur_llm(i)
+        self.state_llm.save_cur_llm(i)
         return i, items
         

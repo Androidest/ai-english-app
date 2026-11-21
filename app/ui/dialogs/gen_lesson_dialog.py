@@ -4,8 +4,8 @@ import asyncio
 from app.ui.models.cache import Cache
 from app.ui.models.meta import Meta
 from app.ui.models.lesson_gen_params import LessonGenParams, LESSON_GEN_PARAMS_ORDER
-from app.ui.states.state_lessons import State_Lessons, FAV_LESSON
-from app.ui.states.state_llms import State_LLMs
+from app.ui.states.state_lesson import State_Lesson, FAV_LESSON
+from app.ui.states.state_llm import State_LLM
 from app.workflow._core_.llm_config import LLMConfig
 from app.ui.components.progress_bar import ProgressBar
 from app.utils.paths import PATH_LESSONS
@@ -16,10 +16,10 @@ from app.workflow.graphs.lesson_generator import LessonGenerator
 ERROR_TEMPLATE = "<span style='color: #e39696; font-size: 16px;'>{msg}</span>"
 
 class GenLessonDialog:
-    def __init__(self, state_lessons: State_Lessons, state_llms: State_LLMs):
+    def __init__(self, state_lesson: State_Lesson, state_llm: State_LLM):
 
-        self.state_lessons = state_lessons
-        self.state_llms = state_llms
+        self.state_lesson = state_lesson
+        self.state_llm = state_llm
 
         with gr.Group(visible=False, elem_classes=["dialog-overlay"]) as self.panel:
 
@@ -165,20 +165,20 @@ class GenLessonDialog:
                     self.confirm_btn.click(
                         fn=self.on_generate,
                         inputs=[
-                            state_lessons.metas, 
-                            state_llms.configs, 
-                            state_llms.cur_llm, 
+                            state_lesson.metas, 
+                            state_llm.configs, 
+                            state_llm.cur_llm, 
                             name,
                             *self.form_components,
                         ],
                         outputs=[
-                            state_lessons.metas,
+                            state_lesson.metas,
                             progress_bar,
                             msg, 
                             self.panel,
                             self.cancel_btn,
                             self.confirm_btn,
-                            state_lessons.cache,
+                            state_lesson.cache,
                         ],
                         show_progress="hidden",
                     )
@@ -212,9 +212,9 @@ class GenLessonDialog:
         trigger.click(
             fn=on_click,
             inputs=[
-                self.state_lessons.cache,
-                self.state_llms.configs,
-                self.state_llms.cur_llm,
+                self.state_lesson.cache,
+                self.state_llm.configs,
+                self.state_llm.cur_llm,
             ],
             outputs=[
                 self.panel,
@@ -269,7 +269,7 @@ class GenLessonDialog:
 
             try:
                 # Save the form into the cache and start the process
-                cache = self.state_lessons.save_cache(gen_params=gen_params)
+                cache = self.state_lesson.save_cache(gen_params=gen_params)
                 yield self.build_on_generate_yields(0, cache=cache)
 
                 # prepare the workflow
@@ -296,16 +296,16 @@ class GenLessonDialog:
                     raise Exception("[AI Generation error]<br>The count of generated sentences does not match the page count.")
 
                 # convert the result data into sheet
-                sheet = self.state_lessons.build_sheet(
+                sheet = self.state_lesson.build_sheet(
                     lesson_name=name,
                     data=gen_data,
                     display_languages_order=gen_req.translation_languages,
                 )
-                self.state_lessons.save_sheet(sheet)
+                self.state_lesson.save_sheet(sheet)
 
                 # build the meta file of the sheet
-                new_meta = self.state_lessons.create_default_meta(name, sheet, gen_params)
-                new_meta = self.state_lessons.save_meta(
+                new_meta = self.state_lesson.create_default_meta(name, sheet, gen_params)
+                new_meta = self.state_lesson.save_meta(
                     meta=new_meta,
                     ai_model_name=llm_configs[cur_llm].alias,
                 )

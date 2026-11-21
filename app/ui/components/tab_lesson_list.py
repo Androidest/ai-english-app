@@ -1,9 +1,9 @@
 import gradio as gr
 from app.ui.models.cache import Cache
 from app.ui.models.meta import Meta
-from app.ui.states.state_llms import State_LLMs
-from app.ui.states.state_lessons import (
-    State_Lessons, 
+from app.ui.states.state_llm import State_LLM
+from app.ui.states.state_lesson import (
+    State_Lesson, 
     SORTING_OPTIONS, 
     FAV_LESSON,
 )
@@ -12,11 +12,11 @@ from app.ui.dialogs.gen_lesson_dialog import GenLessonDialog
 class Tab_Lesson_List:
     def __init__(
             self, 
-            state_lessons: State_Lessons, 
+            state_lesson: State_Lesson, 
             gen_lesson_dialog: GenLessonDialog,
         ):
 
-        self.state_lessons = state_lessons
+        self.state_lesson = state_lesson
         s_search = gr.State(value="")
         
         # Sorting and search bar
@@ -25,7 +25,7 @@ class Tab_Lesson_List:
             # Sorting
             with gr.Column(scale=0): # using column to limit the width
                 with gr.Row(scale=0, elem_classes=["sort-buttons-bar"]): # if using row, @gr.render will copy a new row inside
-                    @gr.render(inputs=[state_lessons.sort_by])
+                    @gr.render(inputs=[state_lesson.sort_by])
                     def render_tab(sort_by: str): 
                         types = SORTING_OPTIONS.__args__
 
@@ -38,19 +38,19 @@ class Tab_Lesson_List:
                                 style_pos = 'sort-btn-right'
                         
                             b = gr.Button(value=option, scale=0, elem_classes=["sort-btn", style_active, style_pos], min_width=80) 
-                            b.click(self.on_click_sort_by, inputs=[gr.State(option)], outputs=[state_lessons.sort_by])
+                            b.click(self.on_click_sort_by, inputs=[gr.State(option)], outputs=[state_lesson.sort_by])
 
             # Search box
             t = gr.Textbox("", elem_classes=["search-box"], max_lines=1, scale=0, min_width=200, container=False, placeholder="Search")
             t.change(lambda x: x, inputs=[t], outputs=[s_search])
         
         # list of lessons
-        @gr.render(inputs=[state_lessons.metas, state_lessons.sort_by, s_search])
+        @gr.render(inputs=[state_lesson.metas, state_lesson.sort_by, s_search])
         def render_tab(lessons: dict[str, Meta], sort_by: str, search: str):
             with gr.Row():
 
                 # Reorganize lessons, including sorting and filtering
-                sorted_lessons = state_lessons.reorganize_lessons(
+                sorted_lessons = state_lesson.reorganize_lessons(
                     lessons,
                     sort_by, 
                     search,
@@ -86,7 +86,7 @@ class Tab_Lesson_List:
                         item_btn.click(
                             self.on_choose_lesson,
                             inputs=[s_meta],
-                            outputs=[state_lessons.cur_lesson],
+                            outputs=[state_lesson.cur_lesson],
                         )
 
                 # "+": The add button. The last item of the list 
@@ -95,7 +95,7 @@ class Tab_Lesson_List:
                     gen_lesson_dialog.attach(add_btn)
 
     def on_click_sort_by(self, cur_sort_by: str):
-        self.state_lessons.save_cache(
+        self.state_lesson.save_cache(
             cur_sort_by = cur_sort_by,
         )
         return cur_sort_by
@@ -103,7 +103,7 @@ class Tab_Lesson_List:
     def on_choose_lesson(self, meta: Meta) -> tuple:
         lesson_name = meta.name
         print(f"Choose lesson: {lesson_name}")
-        self.state_lessons.save_cache(
+        self.state_lesson.save_cache(
             cur_lesson = lesson_name,
         )
         return lesson_name

@@ -6,8 +6,8 @@ from app.ui.dialogs.confirm_dialog import ConfirmDialog
 from app.ui.dialogs.lesson_gen_info_dialog import LessonGenInfoDialog
 from app.ui.models.cache import Cache
 from app.ui.models.meta import Meta
-from app.ui.states.state_llms import State_LLMs
-from app.ui.states.state_lessons import State_Lessons, FAV_LESSON
+from app.ui.states.state_llm import State_LLM
+from app.ui.states.state_lesson import State_Lesson, FAV_LESSON
 from app.utils.sheet import Sheet
 
 ERROR_TEMPLATE = "<span style='color: #e39696; font-size: 18px;'>{msg}</span>"
@@ -17,18 +17,18 @@ PASSED_MSG = CORRECT_TEMPLATE.format(msg="🌟Well done!💯✅")
 class Tab_Lesson_Chosen:
     def __init__(
             self, 
-            state_lessons: State_Lessons, 
-            state_llms: State_LLMs, 
+            state_lesson: State_Lesson, 
+            state_llm: State_LLM, 
             confirm_dialog: ConfirmDialog, 
             metas:dict[str, Meta], 
             cur_lesson:str,
             lesson_gen_info_dialog: LessonGenInfoDialog,
         ):
 
-        self.state_lessons = state_lessons
+        self.state_lesson = state_lesson
 
         s_cur_meta = gr.State(value=metas[cur_lesson])
-        s_cur_sheet = gr.State(value=state_lessons.load_sheet(cur_lesson))
+        s_cur_sheet = gr.State(value=state_lesson.load_sheet(cur_lesson))
         
         @gr.render(inputs=[s_cur_meta, s_cur_sheet])
         def render_lesson_content(meta: Meta, sheet: Sheet):
@@ -36,8 +36,8 @@ class Tab_Lesson_Chosen:
             progress_idx = meta.progress_idx
             correct_percent = max(meta.correct_count / total * 100, 0)
             page_percent = max((meta.progress_idx + 1) / total * 100, 0)
-            is_passed = state_lessons.is_phrase_passed(meta, progress_idx)
-            is_favourite = state_lessons.is_phrase_favourite(meta, progress_idx)
+            is_passed = state_lesson.is_phrase_passed(meta, progress_idx)
+            is_favourite = state_lesson.is_phrase_favourite(meta, progress_idx)
             s_progress_idx = gr.State(progress_idx)
             is_FAV_LESSON = meta.name == FAV_LESSON
 
@@ -56,8 +56,8 @@ class Tab_Lesson_Chosen:
                 exit_btn = gr.Button("↩", variant="secondary", size="sm", elem_classes=["exit-button"], scale=0)
                 exit_btn.click(
                     self.on_exit_lesson, 
-                    inputs=[state_lessons.metas, s_cur_meta, state_lessons.pending_uppdate_meta], 
-                    outputs=[state_lessons.metas, state_lessons.cur_lesson, state_lessons.pending_uppdate_meta]
+                    inputs=[state_lesson.metas, s_cur_meta, state_lesson.pending_uppdate_meta], 
+                    outputs=[state_lesson.metas, state_lesson.cur_lesson, state_lesson.pending_uppdate_meta]
                 )
 
                 if is_FAV_LESSON:
@@ -82,8 +82,8 @@ class Tab_Lesson_Chosen:
                             danger=True,
 
                             confirm_fn=self.on_delete_lesson, 
-                            confirm_inputs=[state_lessons.metas, s_cur_meta],
-                            confirm_outputs=[state_lessons.metas, state_lessons.cur_lesson], 
+                            confirm_inputs=[state_lesson.metas, s_cur_meta],
+                            confirm_outputs=[state_lesson.metas, state_lesson.cur_lesson], 
                         )
 
             if len(sheet) == 0:
@@ -178,8 +178,8 @@ class Tab_Lesson_Chosen:
                         btn = gr.Button("★", elem_classes="favourite-on" if is_favourite else "favourite-off")
                         btn.click(
                             self.on_click_favourite_origin, 
-                            inputs=[s_cur_meta, s_progress_idx, s_cur_sheet, self.state_lessons.pending_uppdate_meta], 
-                            outputs=[s_cur_meta, self.state_lessons.pending_uppdate_meta]
+                            inputs=[s_cur_meta, s_progress_idx, s_cur_sheet, self.state_lesson.pending_uppdate_meta], 
+                            outputs=[s_cur_meta, self.state_lesson.pending_uppdate_meta]
                         )
                     else:
                         btn = gr.Button("★", elem_classes="favourite-on")
@@ -192,8 +192,8 @@ class Tab_Lesson_Chosen:
                             danger=True,
 
                             confirm_fn=self.on_delete_favourite, 
-                            confirm_inputs=[s_cur_meta, s_progress_idx, s_cur_sheet, state_lessons.pending_uppdate_meta], 
-                            confirm_outputs=[s_cur_meta, state_lessons.pending_uppdate_meta, s_cur_sheet, s_progress_idx]
+                            confirm_inputs=[s_cur_meta, s_progress_idx, s_cur_sheet, state_lesson.pending_uppdate_meta], 
+                            confirm_outputs=[s_cur_meta, state_lesson.pending_uppdate_meta, s_cur_sheet, s_progress_idx]
                         )
 
                 with gr.Column(scale=0, min_width=50):
@@ -231,11 +231,11 @@ class Tab_Lesson_Chosen:
         # update all the pending meta that are changed by setting Favourites
         if len(pending_update_meta) > 0:
             for name in pending_update_meta:
-                new_lessons[name] = self.state_lessons.load_meta(name)
+                new_lessons[name] = self.state_lesson.load_meta(name)
 
         # reset current lesson to empty, back to the lessons list
         new_cur_lesson = ""
-        self.state_lessons.save_cache(
+        self.state_lesson.save_cache(
             cur_lesson=new_cur_lesson
         )
         
@@ -246,9 +246,9 @@ class Tab_Lesson_Chosen:
         lesson_name = meta.name
         new_lessons = lessons.copy() 
         del new_lessons[lesson_name]
-        self.state_lessons.delete_sheet(lesson_name)
-        self.state_lessons.delete_meta(lesson_name)
-        self.state_lessons.save_cache(
+        self.state_lesson.delete_sheet(lesson_name)
+        self.state_lesson.delete_meta(lesson_name)
+        self.state_lesson.save_cache(
             cur_lesson = new_cur_lesson,
         )
         gr.Info(f"⛔ Lesson {lesson_name} deleted successfully! ⛔")
@@ -256,13 +256,13 @@ class Tab_Lesson_Chosen:
         return new_lessons, new_cur_lesson
     
     def on_click_prev(self, meta: Meta, progress_idx: int):
-        meta = self.state_lessons.update_progress(meta.model_copy(), progress_idx - 1)
-        meta = self.state_lessons.save_meta(meta)
+        meta = self.state_lesson.update_progress(meta.model_copy(), progress_idx - 1)
+        meta = self.state_lesson.save_meta(meta)
         return meta
 
     def on_click_next(self, meta: Meta, progress_idx: int):
-        meta = self.state_lessons.update_progress(meta.model_copy(), progress_idx + 1)
-        meta = self.state_lessons.save_meta(meta)
+        meta = self.state_lesson.update_progress(meta.model_copy(), progress_idx + 1)
+        meta = self.state_lesson.save_meta(meta)
         return meta
 
     def on_click_submit(self, meta: Meta, progress_idx: int, old_msg: str, words: list[str], *inputs):
@@ -295,29 +295,29 @@ class Tab_Lesson_Chosen:
             new_meta = meta.model_copy()
             if old_msg != PASSED_MSG:
                 message = PASSED_MSG
-                new_meta = self.state_lessons.set_pass_phrase(new_meta, progress_idx, True)
-                new_meta = self.state_lessons.make_brief_meta(new_meta)
-                new_meta = self.state_lessons.save_meta(new_meta)
+                new_meta = self.state_lesson.set_pass_phrase(new_meta, progress_idx, True)
+                new_meta = self.state_lesson.make_brief_meta(new_meta)
+                new_meta = self.state_lesson.save_meta(new_meta)
                 return new_meta, message
             else:
                 # If this page is already passed, this `submit` will switch to the next page.   
-                new_meta = self.state_lessons.update_progress(new_meta, progress_idx + 1)
-                new_meta = self.state_lessons.save_meta(new_meta)
+                new_meta = self.state_lesson.update_progress(new_meta, progress_idx + 1)
+                new_meta = self.state_lesson.save_meta(new_meta)
                 return new_meta, gr.skip()
 
         return meta, message
 
     def on_click_favourite_origin(self, origin_meta: Meta, progress_idx: int, sheet: Sheet, pendind_update_meta: tuple):
         origin_meta = origin_meta.model_copy()
-        if not self.state_lessons.is_phrase_favourite(origin_meta, progress_idx):
-            self.state_lessons.save_favourite(
+        if not self.state_lesson.is_phrase_favourite(origin_meta, progress_idx):
+            self.state_lesson.save_favourite(
                 val=sheet[progress_idx].to_dict(),
                 meta=origin_meta, 
                 idx=progress_idx,
             )
 
         else:
-            self.state_lessons.delete_favourite(
+            self.state_lesson.delete_favourite(
                 en_key=sheet[progress_idx, "SRC"],
                 meta=origin_meta,
                 idx=progress_idx,
@@ -329,7 +329,7 @@ class Tab_Lesson_Chosen:
 
     def on_delete_favourite(self, fav_meta: Meta, progress_idx: int, fav_sheet: Sheet, pendind_update_meta: tuple):
         fav_meta = fav_meta.model_copy()
-        fav_sheet, pending_origin = self.state_lessons.delete_favourite(
+        fav_sheet, pending_origin = self.state_lesson.delete_favourite(
             en_key=fav_sheet[progress_idx, "SRC"],
             meta=fav_meta,
             idx=progress_idx,
@@ -344,8 +344,8 @@ class Tab_Lesson_Chosen:
         # if flag is IS_PASSED, then ignore it(delete it), 
         # else if the flags have other bits set, then just clear the IS_PASSED bit
         meta = meta.model_copy()
-        meta = self.state_lessons.reset_meta(meta)
-        meta = self.state_lessons.save_meta(meta)
+        meta = self.state_lesson.reset_meta(meta)
+        meta = self.state_lesson.save_meta(meta)
         return meta
 
     async def on_click_hint(
@@ -368,7 +368,7 @@ class Tab_Lesson_Chosen:
         chosen_word = random.sample(candidate, 1)
         out_inputs = [ gr.update(interactive=False) ] * len(inputs)
         for (i, word) in chosen_word:
-            masked_word = self.state_lessons.random_mask_word(word, mask_ratio=0.6)
+            masked_word = self.state_lesson.random_mask_word(word, mask_ratio=0.6)
             out_inputs[i] = gr.update(value=masked_word, interactive=False, elem_id="word-wrapper")
 
         yield (

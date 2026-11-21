@@ -2,7 +2,7 @@ from typing import TypedDict, NotRequired
 import json
 from pydantic import BaseModel, Field
 
-from app.utils.paths import PATH_LLMS
+from app.utils.paths import PATH_LLM
 from app.utils.types import ProviderType
 
 class LLMConfig(BaseModel):
@@ -18,7 +18,7 @@ class LLMConfig(BaseModel):
     is_new: bool = Field(default=False, exclude=True)
 
 if __name__ == "__main__":
-    test_file_path = PATH_LLMS/"test.json"
+    test_file_path = PATH_LLM/"test.json"
     
     if not test_file_path.exists():
         test = LLMConfig(

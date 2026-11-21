@@ -2,15 +2,15 @@ import gradio as gr
 
 from app.ui.models.meta import Meta
 from app.ui.models.lesson_gen_params import LESSON_GEN_PARAMS_ORDER
-from app.ui.states.state_lessons import State_Lessons
+from app.ui.states.state_lesson import State_Lesson
 from app.utils.types import Language, CEFRLevel, LANG_OPTIONS
 
 ERROR_TEMPLATE = "<span style='color: #e39696; font-size: 16px;'>{msg}</span>"
 
 class LessonGenInfoDialog:
-    def __init__(self, state_lessons: State_Lessons):
+    def __init__(self, state_lesson: State_Lesson):
 
-        self.state_lessons = state_lessons
+        self.state_lesson = state_lesson
 
         with gr.Group(visible=False, elem_classes=["dialog-overlay"]) as self.panel:
 
@@ -163,8 +163,8 @@ class LessonGenInfoDialog:
         trigger.click(
             fn=on_click,
             inputs=[
-                self.state_lessons.metas,
-                self.state_lessons.cur_lesson,
+                self.state_lesson.metas,
+                self.state_lesson.cur_lesson,
             ],
             outputs=[
                 self.panel,

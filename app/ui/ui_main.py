@@ -1,7 +1,7 @@
 import gradio as gr
 
-from app.ui.states.state_llms import State_LLMs
-from app.ui.states.state_lessons import State_Lessons
+from app.ui.states.state_llm import State_LLM
+from app.ui.states.state_lesson import State_Lesson
 
 from app.ui.dialogs.confirm_dialog import ConfirmDialog
 from app.ui.components.tab_ai import Tab_AI
@@ -11,19 +11,19 @@ from app.ui.dialogs.lesson_gen_info_dialog import LessonGenInfoDialog
 
 with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for hot reloading
     
-    state_llms = State_LLMs()
-    state_lessons = State_Lessons()
+    state_llm = State_LLM()
+    state_lesson = State_Lesson()
 
     confirm_dialog = ConfirmDialog()
-    gen_lesson_dialog = GenLessonDialog(state_lessons=state_lessons, state_llms=state_llms)
-    lesson_gen_info_dialog = LessonGenInfoDialog(state_lessons=state_lessons)
+    gen_lesson_dialog = GenLessonDialog(state_lesson=state_lesson, state_llm=state_llm)
+    lesson_gen_info_dialog = LessonGenInfoDialog(state_lesson=state_lesson)
 
     with gr.Row():
         with gr.Column(scale=1):
             gr.Markdown("# Zeenom Language Learner", elem_classes=["main-title"], scale=1)
 
         with gr.Column(scale=0, min_width=200):
-            @gr.render(inputs=[state_llms.configs, state_llms.cur_llm])
+            @gr.render(inputs=[state_llm.configs, state_llm.cur_llm])
             def render_ai(llm_configs: list[dict], cur_llm: int):
                 cur_llm_name = "-- Not Selected --"
                 if cur_llm != -1 and len(llm_configs) > cur_llm:
@@ -32,23 +32,23 @@ with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for
 
     with gr.Row():
         Tab_Lesson(
-            state_lessons, 
-            state_llms, 
+            state_lesson, 
+            state_llm, 
             confirm_dialog, 
             gen_lesson_dialog, 
             lesson_gen_info_dialog,
         )
         Tab_AI(
-            state_llms, 
+            state_llm, 
             confirm_dialog
         )
 
     def on_load():
-        outs = state_lessons.load_to_outputs()
-        outs += state_llms.load_to_outputs()
+        outs = state_lesson.load_to_outputs()
+        outs += state_llm.load_to_outputs()
         print("Loading Finished")
         return outs
 
-    outputs = state_lessons.outputs()
-    outputs += state_llms.outputs()
+    outputs = state_lesson.outputs()
+    outputs += state_llm.outputs()
     demo.load(on_load, outputs=outputs)    

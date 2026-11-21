@@ -19,7 +19,7 @@ PATH_FAV_SHEET = PATH_LESSONS / f"{FAV_LESSON}.xlsx"
 PATH_FAV_META = PATH_LESSONS / f"{FAV_LESSON}.json"
 
 
-class State_Lessons:
+class State_Lesson:
     def __init__(self):
         self.metas: dict[str, Meta] = gr.State(value={})
         self.cur_lesson = gr.State(value=None)
