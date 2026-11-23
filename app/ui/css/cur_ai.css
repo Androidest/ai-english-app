@@ -1,31 +1,39 @@
 .cur-ai {
     margin-top: 5px;
-    height: 37px;
+    height: 30px;
     border-radius: 8px;
-    border-width: 2px;
+    border-width: 1px;
+    border-color: #f0eeee  !important;
     min-width: fit-content !important;
+    gap: 0;
 }
 
-.cur-ai::before {
-  content: "Current AI ";
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-  color: #999;
-  font-size: 16px;
-  z-index: 1;
-  border-right: 2px solid #ececec;
-  padding-right: 10px;
+#cur-ai-title,
+#cur-ai-name {
+    min-width: fit-content !important;
+    height: 100%;
 }
 
-.cur-ai input {
-    margin-left: 90px;
-    color: #2e2e2f !important;
-    font-size: 16px;
-    font-weight: normal;
-    height: 37px;
-    text-align: left;
-    field-sizing: content;
+#cur-ai-name {
+    border-radius: 0 8px 8px 0;
+}
+
+#cur-ai-title {
+    border-radius: 8px 0 0 8px;
+}
+
+#cur-ai-name input,
+#cur-ai-title input {
+    color: #565657 !important;
+    font-size: 13px !important;
+    font-weight: normal !important;
+    line-height: 1px !important;
+    text-align: center !important;
+    field-sizing: content !important;
+    height: 100% !important;
+    padding: 5px 10px;
+}
+
+#cur-ai-title input {
+    background-color: #f0eeee  !important;
 }

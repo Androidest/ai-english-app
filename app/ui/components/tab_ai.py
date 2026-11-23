@@ -1,7 +1,8 @@
 import gradio as gr
 from app.workflow._core_.llm_config import LLMConfig
 from app.ui.dialogs.confirm_dialog import ConfirmDialog
-from app.ui.states.state_llm import State_LLM, PATH_LLM
+from app.ui.states.state_llm import State_LLM 
+from app.ui.states.state_tts import State_TTS
 from app.utils.types import ProviderType
 import time
        
@@ -11,14 +12,15 @@ class Tab_AI:
     def __init__(
         self, 
         state_llm: State_LLM, 
+        state_tts: State_TTS,
         confirm_dialog: ConfirmDialog
     ):
         self.state_llm = state_llm
 
         with gr.Tab("AIs") as tab_ai:
             # list of llms
-            @gr.render(inputs=[state_llm.configs, state_llm.cur_llm])
-            def render_list(items: list[LLMConfig], cur_llm: int):
+            @gr.render(inputs=[state_llm.configs, state_llm.cur_model])
+            def render_list(items: list[LLMConfig], cur_model: int):
                 # render all the llm config items
                 for idx, item in enumerate(items):
     
@@ -30,7 +32,7 @@ class Tab_AI:
                     api_key = item.api_key
                     is_editing = item.editing
                     error = item.error
-                    is_selected = idx == cur_llm
+                    is_selected = idx == cur_model
     
                     # css classes for item card and button panel
                     item_row_classes = ["ai-deselected-item", "ai-clickable-item"]
@@ -46,8 +48,8 @@ class Tab_AI:
                         row_click = gr.Button("", elem_classes=["ai-slot-click-button"])
                         row_click.click(
                             self.on_click_item,
-                            inputs=[gr.State(idx), state_llm.configs, state_llm.cur_llm],
-                            outputs=[state_llm.cur_llm, state_llm.configs],
+                            inputs=[gr.State(idx), state_llm.configs, state_llm.cur_model],
+                            outputs=[state_llm.cur_model, state_llm.configs],
                         )
     
                         # radio circle to display the selected item

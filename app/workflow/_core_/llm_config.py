@@ -17,30 +17,4 @@ class LLMConfig(BaseModel):
     id: str = Field(default="", exclude=True)
     is_new: bool = Field(default=False, exclude=True)
 
-if __name__ == "__main__":
-    test_file_path = PATH_LLM/"test.json"
-    
-    if not test_file_path.exists():
-        test = LLMConfig(
-            alias="test",
-            model_provider="deepseek",
-            model="deepseek",
-            base_url="https://api.deepseek.cn/v1",
-            api_key="sk-xxxx",
-            editing=True
-        )
-
-        with open(test_file_path, "w", encoding="utf-8") as f:
-            json.dump(
-                test.model_dump(),
-                f,
-                ensure_ascii=False,  
-                indent=4            
-            )
-    
-
-    with open(test_file_path, "r", encoding="utf-8") as f:
-        config = LLMConfig.model_validate_json(f.read())    
-        print(config)
-
 

@@ -16,7 +16,7 @@ class State_AIBase(Generic[T]):
     def __init__(self, model_type: type[T]):
         self._model_type: type[T] = model_type
         self.configs = gr.State(value=[])
-        self.cur_llm = gr.State(value=-1)
+        self.cur_model = gr.State(value=-1)
 
     def load_to_outputs(self) -> tuple[list[T], int]:
         configs: list[T] = []
@@ -32,16 +32,16 @@ class State_AIBase(Generic[T]):
 
         if self.PATH_CUR_MODEL.exists():
             with open(self.PATH_CUR_MODEL, "r", encoding="utf-8") as f:
-                cur_llm = int(f.read())
+                cur_model = int(f.read())
         else:
-            cur_llm = 0 if len(configs) > 0 else -1
+            cur_model = 0 if len(configs) > 0 else -1
 
-        return configs, cur_llm
+        return configs, cur_model
 
     def outputs(self) -> tuple[gr.State, gr.State]:
         return (
             self.configs,
-            self.cur_llm,
+            self.cur_model,
         )
 
     def save_item(self, config: T) -> None:
@@ -56,9 +56,9 @@ class State_AIBase(Generic[T]):
                 indent=4,
             )
 
-    def save_cur_llm(self, cur_llm: int) -> None:
+    def save_cur_llm(self, cur_model: int) -> None:
         with open(self.PATH_CUR_MODEL, "w", encoding="utf-8") as f:
-            f.write(str(cur_llm))
+            f.write(str(cur_model))
 
     def delete_item(self, config: T) -> None:
         path = self.PATH_MODEL / f"{config.id}.json"

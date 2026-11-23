@@ -2,3 +2,9 @@
     font-size: 35px !important;
     color: #6d80a0 !important;
 }
+
+.main-title{
+    max-height: fit-content;
+    width: stretch !important;
+    min-width: None;
+}

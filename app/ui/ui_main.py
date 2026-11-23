@@ -1,6 +1,7 @@
 import gradio as gr
 
 from app.ui.states.state_llm import State_LLM
+from app.ui.states.state_tts import State_TTS
 from app.ui.states.state_lesson import State_Lesson
 
 from app.ui.dialogs.confirm_dialog import ConfirmDialog
@@ -12,6 +13,7 @@ from app.ui.dialogs.lesson_gen_info_dialog import LessonGenInfoDialog
 with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for hot reloading
     
     state_llm = State_LLM()
+    state_tts = State_TTS()
     state_lesson = State_Lesson()
 
     confirm_dialog = ConfirmDialog()
@@ -19,16 +21,33 @@ with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for
     lesson_gen_info_dialog = LessonGenInfoDialog(state_lesson=state_lesson)
 
     with gr.Row():
-        with gr.Column(scale=1):
-            gr.Markdown("# Zeenom Language Learner", elem_classes=["main-title"], scale=1)
+        gr.Markdown("# Zeenom Language Learner", elem_classes=["main-title"], scale=1)
 
-        with gr.Column(scale=0, min_width=200):
-            @gr.render(inputs=[state_llm.configs, state_llm.cur_llm])
-            def render_ai(llm_configs: list[dict], cur_llm: int):
-                cur_llm_name = "-- Not Selected --"
-                if cur_llm != -1 and len(llm_configs) > cur_llm:
-                    cur_llm_name = llm_configs[cur_llm].alias
-                gr.Textbox(cur_llm_name, elem_classes=["cur-ai"], max_lines=1, scale=0, min_width=200, container=False)
+        with gr.Row(elem_classes=["cur-ai"], scale=0):
+            gr.Textbox(value="LLM", elem_id="cur-ai-title", max_lines=1, scale=0, container=False)
+            chosen_llm = gr.Textbox(elem_id="cur-ai-name", max_lines=1, scale=0, container=False)
+
+        with gr.Row(elem_classes=["cur-ai"], scale=0):
+            gr.Textbox(value="TTS", elem_id="cur-ai-title", max_lines=1, scale=0, container=False)
+            chosen_tts = gr.Textbox(elem_id="cur-ai-name", max_lines=1, scale=0, container=False)
+
+        def on_change_cur_model(cur_model: int, configs: list):
+            model_name = "-- Not Selected --"
+            if cur_model != -1 and len(configs) > cur_model:
+                model_name = configs[cur_model].alias
+            return gr.update(value=model_name)
+        
+        state_llm.cur_model.change(
+            on_change_cur_model,
+            inputs=[state_llm.cur_model, state_llm.configs],
+            outputs=[chosen_llm]
+        )
+        
+        state_llm.cur_model.change(
+            on_change_cur_model,
+            inputs=[state_tts.cur_model, state_tts.configs],
+            outputs=[chosen_tts]
+        )
 
     with gr.Row():
         Tab_Lesson(
@@ -40,15 +59,18 @@ with gr.Blocks(fill_height=True) as demo: # 'demo' is a predefined name used for
         )
         Tab_AI(
             state_llm, 
+            state_tts,
             confirm_dialog
         )
 
     def on_load():
         outs = state_lesson.load_to_outputs()
         outs += state_llm.load_to_outputs()
+        outs += state_tts.load_to_outputs()
         print("Loading Finished")
         return outs
 
     outputs = state_lesson.outputs()
     outputs += state_llm.outputs()
+    outputs += state_tts.outputs()
     demo.load(on_load, outputs=outputs)    

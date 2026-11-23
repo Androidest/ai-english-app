@@ -6,7 +6,7 @@ from app.utils.paths import PATH_LLM
 
 class State_LLM(State_AIBase[LLMConfig]):
     PATH_MODEL: Path = PATH_LLM
-    PATH_CUR_MODEL: Path = PATH_LLM / "cur_llm.txt"
+    PATH_CUR_MODEL: Path = PATH_LLM / "cur_model.txt"
 
     def __init__(self):
         super().__init__(LLMConfig)

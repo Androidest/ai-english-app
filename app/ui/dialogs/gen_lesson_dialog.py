@@ -26,7 +26,10 @@ class GenLessonDialog:
             with gr.Column(elem_classes=["dialog-panel", "gen-dialog-panel"]):
 
                 gr.Markdown("AI Lesson Generator", elem_classes=["dialog-message"], scale=0)
-                self.cur_ai = gr.Textbox("", elem_classes=["cur-ai"], max_lines=1, scale=1, container=False)
+
+                with gr.Row(elem_classes=["cur-ai"], scale=0):
+                    gr.Textbox(value="Current AI", elem_id="cur-ai-title", max_lines=1, scale=0, container=False)
+                    self.cur_ai = gr.Textbox(elem_id="cur-ai-name", max_lines=1, scale=0, container=False)
 
                 name = gr.Textbox (
                     "", 
@@ -167,7 +170,7 @@ class GenLessonDialog:
                         inputs=[
                             state_lesson.metas, 
                             state_llm.configs, 
-                            state_llm.cur_llm, 
+                            state_llm.cur_model, 
                             name,
                             *self.form_components,
                         ],
@@ -196,11 +199,11 @@ class GenLessonDialog:
         def on_click(
             cache: Cache, 
             llm_configs: LLMConfig, 
-            cur_llm: int
+            cur_model: int
         ):
             cur_llm_name = "-- Not Selected --"
-            if cur_llm != -1 and len(llm_configs) > cur_llm:
-                cur_llm_name = llm_configs[cur_llm].alias
+            if cur_model != -1 and len(llm_configs) > cur_model:
+                cur_llm_name = llm_configs[cur_model].alias
 
             params = cache.gen_params.model_dump()
             return (
@@ -214,7 +217,7 @@ class GenLessonDialog:
             inputs=[
                 self.state_lesson.cache,
                 self.state_llm.configs,
-                self.state_llm.cur_llm,
+                self.state_llm.cur_model,
             ],
             outputs=[
                 self.panel,
@@ -227,13 +230,13 @@ class GenLessonDialog:
         self, 
         metas: dict[str, Meta], 
         llm_configs: list[LLMConfig], #
-        cur_llm: int,  #
+        cur_model: int,  #
         name: str, #
         *form_params,
     ):
         
         error = ""
-        if llm_configs is None or cur_llm >= len(llm_configs) or cur_llm < 0:
+        if llm_configs is None or cur_model >= len(llm_configs) or cur_model < 0:
             error = ERROR_TEMPLATE.format(msg="AI is required!<br>Please add and chose one from the AI tab.")
 
         elif name == "":
@@ -263,7 +266,7 @@ class GenLessonDialog:
         if error == "":
             print(f"[Lesson Generator]")
             print(f"Lesson Name: {name}")
-            print(f"LLM: {cur_llm}", llm_configs[cur_llm])
+            print(f"LLM: {cur_model}", llm_configs[cur_model])
             print(gen_params.model_dump_json(indent=1))
             print("Start generating lesson...")
 
@@ -277,7 +280,7 @@ class GenLessonDialog:
                 workflow = LessonGenerator()
                 iterator = workflow.astream(
                     input=gen_req, 
-                    llm_config=llm_configs[cur_llm], 
+                    llm_config=llm_configs[cur_model], 
                     user_id="TODO", 
                 )
 
@@ -307,7 +310,7 @@ class GenLessonDialog:
                 new_meta = self.state_lesson.create_default_meta(name, sheet, gen_params)
                 new_meta = self.state_lesson.save_meta(
                     meta=new_meta,
-                    ai_model_name=llm_configs[cur_llm].alias,
+                    ai_model_name=llm_configs[cur_model].alias,
                 )
                 metas = metas.copy()
                 metas[name] = new_meta
