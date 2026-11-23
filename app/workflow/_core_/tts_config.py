@@ -11,6 +11,6 @@ class TTSConfig(LLMConfig):
         super().validate_to_error()
 
         if self.voice_id == "":
-            self.error = "voice_id is required"
+            self.error = "Voice ID is required"
 
 
