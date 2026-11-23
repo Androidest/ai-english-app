@@ -1,26 +1,26 @@
-.ai-input-editing textarea,
-.ai-input-editing .secondary-wrap {
-    z-index: 101;
+#ai-config-type h3 {
+    color: #9a9a9a !important;
 }
 
-.ai-input-editing {
-    background-color: #c1e9f5;
+#ai-input-editing {
+    background-color: #c1e9f5 !important;
+}
+
+#ai-input-editing textarea,
+#ai-input-editing .secondary-wrap {
+    z-index: 101 !important;
 }
 
 .ai-confirm-editing {
     background-color: #c1e9f5;
 }
 
-.ai-selected-item {
+#ai-selected-item {
     background-color: #eeeeee;
     border: 2px solid #2196F3;
 }
 
-.ai-selected-item-bg {
-    background-color: #f1f1f1;
-}
-
-.ai-deselected-item {
+#ai-deselected-item {
     background-color: #f1f1f1;
     border: 2px solid #f1f1f1;
 }

@@ -75,7 +75,7 @@ class LessonGenParams(LessonGenerationRequest):
     
 LESSON_GEN_PARAMS_ORDER = [ 
     field 
-    for field in LessonGenParams.model_fields.keys()
-    if field != "translation_languages"
+    for field, info in LessonGenParams.model_fields.items()
+    if not info.exclude
 ]
 

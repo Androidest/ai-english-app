@@ -3,7 +3,6 @@ import gradio as gr
 import json
 from pathlib import Path
 from typing import Generic, TypeVar
-
 from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
@@ -14,7 +13,7 @@ class State_AIBase(Generic[T]):
     PATH_CUR_MODEL: Path
 
     def __init__(self, model_type: type[T]):
-        self._model_type: type[T] = model_type
+        self.model_type: type[T] = model_type
         self.configs = gr.State(value=[])
         self.cur_model = gr.State(value=-1)
 
@@ -24,7 +23,7 @@ class State_AIBase(Generic[T]):
         if self.PATH_MODEL.exists():
             for file_path in self.PATH_MODEL.rglob("*.json"):
                 with open(file_path, "r", encoding="utf-8") as f:
-                    config = self._model_type.model_validate_json(f.read())
+                    config = self.model_type.model_validate_json(f.read())
                     config.id = file_path.stem
                     configs.append(config)
 

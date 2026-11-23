@@ -11,6 +11,12 @@ ProviderType = Literal[
     "nvidia",
 ]
 
+TTSProviderType = Literal[
+    "openai", 
+    "deepseek", 
+    "豆包",
+]
+
 CEFRLevel = Literal[
     "A1",
     "A2",
