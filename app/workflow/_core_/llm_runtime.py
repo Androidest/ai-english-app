@@ -12,9 +12,7 @@ class LLMRuntime:
     def __init__(self, config: LLMConfig):
         self.config = config
         self._models: dict[tuple, BaseChatModel] = {}
-        self._chains: dict[tuple, Runnable] = {}
         self.lock_model = threading.Lock()
-        self.lock_chain = threading.Lock()
 
     def get_model(
         self,

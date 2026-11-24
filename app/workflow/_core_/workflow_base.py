@@ -7,10 +7,9 @@ from app.workflow._core_.llm_config import LLMConfig
 
 
 class WorkflowBase(ABC):
-    graph: CompiledStateGraph
 
     def __init__(self):
-        self.graph = self._build_graph()
+        self.graph : CompiledStateGraph = self._build_graph()
 
     @abstractmethod
     def _build_graph(

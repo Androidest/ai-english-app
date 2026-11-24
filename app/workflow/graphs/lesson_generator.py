@@ -28,10 +28,10 @@ RECURSION_LIMIT = 200
 
 class LessonGenerator(WorkflowBase):
     """A workflow that generates multilingual lesson sentences."""
-    last_state: LessonGeneratorState
 
     def __init__(self):
         # subgraphs
+        self.last_state: LessonGeneratorState = None
         self.src_grammar_corrector = GrammarCorrector_Subgraph("src")
         self.translation_corrector = TranslationCorrection_Subgraph()
         # self.memory = MemorySaver()
