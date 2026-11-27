@@ -162,7 +162,8 @@ class Tab_Lesson_Chosen:
                 with gr.Column(scale=0, min_width=100):
                     gr.HTML(f"<div class='tip-bubble tip-correct'>correct</div>")
 
-            msg = gr.Markdown(PASSED_MSG if is_passed else "", scale=0, elem_classes=["tip-msg"])
+            msg = gr.Markdown(PASSED_MSG if is_passed else "", scale=0, elem_id="tip-msg")
+            gr.Markdown(src, scale=0, elem_id="tip-src", visible=is_passed)
 
             with gr.Row(min_height=10, elem_classes=["button-bar"]):
                 if not is_FAV_LESSON:

@@ -186,10 +186,27 @@
     background-color: #95e9df;
 }
 
-.tip-msg {
+#tip-msg {
     font-size: 18px;
     font-weight: normal;
     text-align: center;
+}
+
+#tip-src span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#tip-src p {
+    font-size: 12px;
+    color: #bab9b9;
+    font-weight: normal;
+    text-align: center;
+    border-radius: 15px;
+    background-color: #f4f4f4;
+    width: fit-content;
+    padding: 1px 10px;
 }
 
 .favourite-on {
