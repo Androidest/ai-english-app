@@ -6,9 +6,11 @@ from app.ui.dialogs.confirm_dialog import ConfirmDialog
 from app.ui.dialogs.lesson_gen_info_dialog import LessonGenInfoDialog
 from app.ui.models.cache import Cache
 from app.ui.models.meta import Meta
-from app.ui.states.state_llm import State_LLM
+from app.ui.states.state_tts import State_TTS
 from app.ui.states.state_lesson import State_Lesson, FAV_LESSON
 from app.utils.sheet import Sheet
+from app.workflow._core_.tts_config import TTSConfig
+from app.utils.paths import PATH_AUDIO
 
 ERROR_TEMPLATE = "<span style='color: #e39696; font-size: 18px;'>{msg}</span>"
 CORRECT_TEMPLATE = "<span style='color: #6ce38a; font-size: 35px;'>{msg}</span>"
@@ -18,7 +20,7 @@ class Tab_Lesson_Chosen:
     def __init__(
             self, 
             state_lesson: State_Lesson, 
-            state_llm: State_LLM, 
+            state_tts: State_TTS, 
             confirm_dialog: ConfirmDialog, 
             metas:dict[str, Meta], 
             cur_lesson:str,
@@ -26,6 +28,7 @@ class Tab_Lesson_Chosen:
         ):
 
         self.state_lesson = state_lesson
+        self.state_tts = state_tts
 
         s_cur_meta = gr.State(value=metas[cur_lesson])
         s_cur_sheet = gr.State(value=state_lesson.load_sheet(cur_lesson))
@@ -166,13 +169,11 @@ class Tab_Lesson_Chosen:
                     btn = gr.Button("↺")
                     btn.click(self.on_click_restart, inputs=[s_cur_meta], outputs=[s_cur_meta])
                 with gr.Column(scale=0, min_width=100):
-                    btn = gr.Button("◀", interactive=progress_idx > 0)
-                    btn.click(self.on_click_prev, inputs=[s_cur_meta, s_progress_idx], outputs=[s_cur_meta])
+                    prev_btn = gr.Button("◀", interactive=progress_idx > 0)
                 with gr.Column(scale=0, min_width=120):
                     submit_btn = gr.Button("⏏ submit", elem_classes=["submit-button"])
                 with gr.Column(scale=0, min_width=100):
-                    btn = gr.Button("▶", interactive=progress_idx < len(sheet)-1)
-                    btn.click(self.on_click_next, inputs=[s_cur_meta, s_progress_idx], outputs=[s_cur_meta])
+                    next_btn = gr.Button("▶", interactive=progress_idx < len(sheet)-1)
                 with gr.Column(scale=0, min_width=50):
                     if not is_FAV_LESSON:
                         btn = gr.Button("★", elem_classes="favourite-on" if is_favourite else "favourite-off")
@@ -199,6 +200,22 @@ class Tab_Lesson_Chosen:
                 with gr.Column(scale=0, min_width=50):
                     hint = gr.Button("💡")
 
+            with gr.Row(min_height=10, elem_classes=["button-bar"]):
+                with gr.Column(scale=0, min_width=150):
+                    speak = gr.Button("🕪 read", visible=is_passed)
+                with gr.Column(scale=0, min_width=150):
+                    regenerate_speak = gr.Button("🕪 re-generate", visible=is_passed, interactive=False)
+
+            audio_out = gr.Audio(
+                label="", 
+                interactive=False, 
+                autoplay=True, 
+                show_label=False, 
+                container=False,
+                editable=False,
+                buttons=[],
+            )
+
             s_words = gr.State(words)
 
             # hint
@@ -207,6 +224,41 @@ class Tab_Lesson_Chosen:
                 inputs=[s_words, *inputs],
                 outputs=[hint, *inputs],
                 show_progress="hidden",
+            )
+
+            # speak
+            speak.click(
+                self.on_click_speak,
+                inputs=[gr.State(src), state_tts.configs, state_tts.cur_model, gr.State(False)],
+                outputs=[audio_out, speak, regenerate_speak],
+                show_progress="hidden",
+            )
+
+            regenerate_speak.click(
+                self.on_click_speak,
+                inputs=[gr.State(src), state_tts.configs, state_tts.cur_model, gr.State(True)],
+                outputs=[audio_out, speak, regenerate_speak],
+                show_progress="hidden",
+            )
+
+            audio_out.pause(
+                self.on_audio_pause,
+                outputs=[audio_out, speak, regenerate_speak],
+                show_progress="hidden",
+            )
+
+            # prev and next
+            prev_btn.click(
+                self.on_click_prev, 
+                inputs=[s_cur_meta, s_progress_idx], 
+                outputs=[s_cur_meta, audio_out, regenerate_speak],
+                show_progress=False,
+            )
+            next_btn.click(
+                self.on_click_next, 
+                inputs=[s_cur_meta, s_progress_idx], 
+                outputs=[s_cur_meta, audio_out, regenerate_speak],
+                show_progress=False,
             )
             
             # submit events
@@ -258,12 +310,12 @@ class Tab_Lesson_Chosen:
     def on_click_prev(self, meta: Meta, progress_idx: int):
         meta = self.state_lesson.update_progress(meta.model_copy(), progress_idx - 1)
         meta = self.state_lesson.save_meta(meta)
-        return meta
+        return meta, None, gr.update(interactive=False)
 
     def on_click_next(self, meta: Meta, progress_idx: int):
         meta = self.state_lesson.update_progress(meta.model_copy(), progress_idx + 1)
         meta = self.state_lesson.save_meta(meta)
-        return meta
+        return meta, None, gr.update(interactive=False)
 
     def on_click_submit(self, meta: Meta, progress_idx: int, old_msg: str, words: list[str], *inputs):
         message = ""
@@ -350,8 +402,8 @@ class Tab_Lesson_Chosen:
 
     async def on_click_hint(
         self, 
-        words: str, 
-        *inputs: str,
+        words: list[str], 
+        *inputs: list[str],
     ):
         candidate = []
         for i, (word, in_word) in enumerate(zip(words, inputs)):
@@ -386,3 +438,52 @@ class Tab_Lesson_Chosen:
             gr.update(interactive=True), 
             *out_inputs,
         )
+
+    async def on_click_speak(
+        self,
+        src_sentence: str,
+        tts_configs: list[TTSConfig],
+        cur_model: int,
+        regenerate: bool,
+    ):
+        yield (
+            gr.update(value=None, playback_position=0), 
+            gr.update(interactive=False),
+            gr.update(interactive=False),
+        )
+        await asyncio.sleep(0.02)
+        
+        if cur_model < 0 or cur_model >= len(tts_configs):
+            gr.Warning("Currently, no TTS model is selected!")
+            return
+
+        model_config = tts_configs[cur_model]
+        filepath = PATH_AUDIO/f"{src_sentence}.{model_config.voice_id}.wav"
+
+        if not filepath.exists() or regenerate:
+            from app.workflow._core_.tts_runtime import TTSRuntime
+            runtime = TTSRuntime(model_config)
+            model = runtime.get_model()
+            data = model.synthesize(src_sentence)
+            yield (
+                gr.update(value=data, playback_position=0), 
+                gr.skip(),
+                gr.skip(),
+            )
+            runtime.save_audio(data, filepath)
+            return
+
+        # switch between filepath and ndarray data to force the audio component to replay the content
+        yield (
+            gr.update(value=filepath, playback_position=0), 
+            gr.skip(),
+            gr.skip(),
+        )
+
+    def on_audio_pause(self):
+        return (
+            gr.update(playback_position=0),
+            gr.update(interactive=True), 
+            gr.update(interactive=True), 
+        )
+    

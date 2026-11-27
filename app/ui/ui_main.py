@@ -64,7 +64,7 @@ class UIMain:
             with gr.Row():
                 Tab_Lesson(
                     self.state_lesson, 
-                    self.state_llm, 
+                    self.state_tts, 
                     confirm_dialog, 
                     gen_lesson_dialog, 
                     lesson_gen_info_dialog,

@@ -335,6 +335,7 @@ class Tab_AI:
             return old_cur_model, new_items
 
         if i == old_cur_model:
+            self.state_managers[manager_type].save_cur_model(-1)
             return -1, old_items
 
         self.state_managers[manager_type].save_cur_model(i)
