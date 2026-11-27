@@ -8,3 +8,4 @@ PATH_LLM = PATH_DATA/'llm'
 PATH_TTS = PATH_DATA/'tts'
 PATH_CSS = PATH_PROJECT_ROOT/'app/ui/css'
 PATH_JS = PATH_PROJECT_ROOT/'app/ui/js/script.js'
+PATH_AUDIO = PATH_DATA / "audio"

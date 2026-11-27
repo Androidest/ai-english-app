@@ -11,6 +11,11 @@
     z-index: 101 !important;
 }
 
+.ai-input-inactive textarea,
+.ai-input-inactive .secondary-wrap {
+    background-color: #ececec !important;
+}
+
 .ai-confirm-editing {
     background-color: #c1e9f5;
 }

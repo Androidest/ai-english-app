@@ -1,35 +1,30 @@
-import gradio as gr
 import argparse
-from app.utils.config import config_dict, set_config
-from app.ui.ui_main import demo    
-from app.utils.paths import PATH_CSS, PATH_JS
 import os
 
+from app.utils.config import config_dict, set_config
+from app.ui.ui_main import UIMain    
+
 if __name__ == "__main__":
-    # args
+    # get args
     parser = argparse.ArgumentParser()
     parser.add_argument("--env", choices=list(config_dict.keys()), default="dev")
     args = parser.parse_args() 
 
+    # load config
     os.environ["ENV"] = args.env
-
     set_config(args.env)
     from app.utils.config import config
 
-    css_paths = [
-        file_path
-        for file_path in PATH_CSS.rglob(f"*.css")
-    ]
-
-    with open(PATH_JS, "r", encoding="utf-8") as f:
-        external_js = f.read()
-        # print(external_js)
-
-    demo.launch(
-        server_name=config.HOST, 
-        server_port=config.PORT, 
-        inbrowser=True,
-        css_paths=css_paths,
-        js=external_js,
+    # launch the app
+    app = UIMain()
+    app.launch(
+        host=config.HOST, 
+        port=config.PORT, 
         share=config.SHARE,
+        inbrowser=True,
     )
+
+    # `demo` is a predefined name used for hot reloading
+    # It will report: AttributeError: module '__main__' has no attribute 'demo',
+    # if `demo` is not defined inside __main__
+    demo = app.body 

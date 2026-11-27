@@ -9,20 +9,5 @@ class LLMConfig(AIConfig):
     model: str = Field(default="", description="Model")
     base_url: str = Field(default="", description="Base Url")
     api_key: str = Field(default="", description="API Key")
-
-    def validate_to_error(self):
-        self.error = ""
-        
-        if self.alias == "":
-            self.error = "Alias is required"
-
-        elif self.model == "":
-            self.error = "Model is required"
-            
-        elif self.base_url == "":
-            self.error = "Base URL is required"
-            
-        elif self.api_key == "":
-            self.error = "API Key is required"
             
         

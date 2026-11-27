@@ -55,11 +55,11 @@ class State_AIBase(Generic[T]):
                 indent=4,
             )
 
-    def save_cur_llm(self, cur_model: int) -> None:
-        with open(self.PATH_CUR_MODEL, "w", encoding="utf-8") as f:
-            f.write(str(cur_model))
-
     def delete_item(self, config: T) -> None:
         path = self.PATH_MODEL / f"{config.id}.json"
         if path.exists():
             path.unlink()
+
+    def save_cur_model(self, cur_model: int) -> None:
+        with open(self.PATH_CUR_MODEL, "w", encoding="utf-8") as f:
+            f.write(str(cur_model))

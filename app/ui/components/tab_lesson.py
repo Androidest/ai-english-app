@@ -11,13 +11,13 @@ from app.ui.dialogs.lesson_gen_info_dialog import LessonGenInfoDialog
 class Tab_Lesson:
 
     def __init__(
-            self, 
-            state_lesson: State_Lesson, 
-            state_llm: State_LLM, 
-            confirm_dialog: ConfirmDialog, 
-            gen_lesson_dialog: GenLessonDialog,
-            lesson_gen_info_dialog: LessonGenInfoDialog,
-        ):
+        self, 
+        state_lesson: State_Lesson, 
+        state_llm: State_LLM, 
+        confirm_dialog: ConfirmDialog, 
+        gen_lesson_dialog: GenLessonDialog,
+        lesson_gen_info_dialog: LessonGenInfoDialog,
+    ):
 
         with gr.Tab("Lessons"):
 

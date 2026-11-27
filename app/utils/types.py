@@ -14,7 +14,6 @@ ProviderType = Literal[
 TTSProviderType = Literal[
     "openai", 
     "deepseek", 
-    "豆包",
 ]
 
 CEFRLevel = Literal[

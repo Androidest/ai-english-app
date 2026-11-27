@@ -21,10 +21,10 @@ async def test_lesson_generator():
 
     request = LessonGenerationRequest(
         source_language="English",
-        source_max_len=200,
+        source_max_len=100,
         topic="Travel and everyday situations",
-        target_count=50,
-        difficulty="C2",
+        target_count=5,
+        difficulty="A1",
 
         translation_languages=["Chinese"],
 

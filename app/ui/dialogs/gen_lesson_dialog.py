@@ -10,8 +10,6 @@ from app.workflow._core_.llm_config import LLMConfig
 from app.ui.components.progress_bar import ProgressBar
 from app.utils.paths import PATH_LESSONS
 from app.utils.types import Language, CEFRLevel, LANG_OPTIONS
-from app.workflow.schemas.lesson_generation_request import LessonGenerationRequest
-from app.workflow.graphs.lesson_generator import LessonGenerator
 
 ERROR_TEMPLATE = "<span style='color: #e39696; font-size: 16px;'>{msg}</span>"
 
@@ -138,7 +136,7 @@ class GenLessonDialog:
                     display_language_2,
                 ]
 
-                msg = gr.Markdown("", scale=0, elem_classes=["tip-msg"])
+                self.msg = gr.Markdown("", scale=0, elem_classes=["tip-msg"])
                 progress_bar = ProgressBar(
                     height=10,
                     visible=False,
@@ -177,7 +175,7 @@ class GenLessonDialog:
                         outputs=[
                             state_lesson.metas,
                             progress_bar,
-                            msg, 
+                            self.msg, 
                             self.panel,
                             self.cancel_btn,
                             self.confirm_btn,
@@ -209,6 +207,7 @@ class GenLessonDialog:
             return (
                 gr.update(visible=True), # for `self.panel``
                 cur_llm_name, # self.cur_ai
+                "", # self.msg
                 *[gr.update(value=params[field]) for field in LESSON_GEN_PARAMS_ORDER], # for `*self.form_components``
             )
 
@@ -222,6 +221,7 @@ class GenLessonDialog:
             outputs=[
                 self.panel,
                 self.cur_ai,
+                self.msg,
                 *self.form_components,
             ]
         )
@@ -274,8 +274,11 @@ class GenLessonDialog:
                 # Save the form into the cache and start the process
                 cache = self.state_lesson.save_cache(gen_params=gen_params)
                 yield self.build_on_generate_yields(0, cache=cache)
+                await asyncio.sleep(0.02)
 
                 # prepare the workflow
+                from app.workflow.schemas.lesson_generation_request import LessonGenerationRequest
+                from app.workflow.graphs.lesson_generator import LessonGenerator
                 gen_req: LessonGenerationRequest = gen_params.to_request()
                 workflow = LessonGenerator()
                 iterator = workflow.astream(
