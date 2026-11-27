@@ -66,6 +66,9 @@ class Tab_Lesson_Chosen:
                 if is_FAV_LESSON:
                     gr.Markdown(f"{meta.name}", scale=1, elem_classes=["lesson-title", "fav-title" ])
                 else:
+                    with gr.Column(scale=0, min_width=40):
+                        rename = gr.Button("✏️", elem_id="rename-btn")
+                    
                     gr.Markdown(f"{meta.name}", scale=1, elem_classes=["lesson-title"])
                     gr.Textbox(f"Learning: {meta.gen_params.source_language}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
                     gr.Textbox(f"Difficulty: {meta.gen_params.difficulty}", scale=0, elem_classes=["lesson-meta"], max_lines=1, container=False)
@@ -218,6 +221,21 @@ class Tab_Lesson_Chosen:
 
             s_words = gr.State(words)
 
+            confirm_dialog.attach(
+                trigger=rename,
+
+                textbox=meta.name,
+                
+                message=f"Rename current lesson",
+                confirm_text="Confirm",
+                cancel_text="Cancel",
+                danger=True,
+
+                confirm_fn=self.on_rename_lesson, 
+                confirm_inputs=[s_cur_meta, s_cur_sheet, state_lesson.metas],
+                confirm_outputs=[s_cur_meta, state_lesson.metas, state_lesson.cur_lesson], 
+            )
+
             # hint
             hint.click(
                 self.on_click_hint,
@@ -293,7 +311,34 @@ class Tab_Lesson_Chosen:
         
         return new_lessons, new_cur_lesson, () # cur_meta is empty when no lesson is selected, back to the lessons list
 
-    def on_delete_lesson(self, lessons: dict, meta: Meta) -> tuple:
+    def on_rename_lesson(
+        self, 
+        meta: Meta,
+        sheet: Sheet,
+        metas: dict[str, Meta],
+        new_name: str,
+    ) -> tuple:
+
+        old_name = meta.name
+        self.state_lesson.rename_sheet(sheet, new_name)
+        meta = self.state_lesson.rename_meta(meta, new_name)
+
+        new_metas = {
+            k: v
+            for k, v in metas.items()
+            if k != old_name
+        }
+        new_metas[meta.name] = meta
+
+        gr.Info(f"Renamed Lesson `{old_name}` to `{new_name}`")
+        return meta, new_metas, meta.name
+    
+    def on_delete_lesson(
+        self, 
+        lessons: dict[str, Meta], 
+        meta: Meta
+    ) -> tuple:
+        
         new_cur_lesson = "" # deselect the current lesson, back to the lessons list
         lesson_name = meta.name
         new_lessons = lessons.copy() 

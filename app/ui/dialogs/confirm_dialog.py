@@ -4,6 +4,7 @@ import gradio as gr
 
 @dataclass
 class ConfirmDialogData:
+    textbox: str = None
     message: str = ""
     confirm_text: str = ""
     cancel_text: str = ""
@@ -30,7 +31,14 @@ class ConfirmDialog:
                 # dynamic display
                 @gr.render(inputs=[self.data])
                 def render_confirm_dialog(data: ConfirmDialogData):
-                    gr.Markdown(data.message, elem_classes=["dialog-message"], scale=0)
+
+                    self.textbox = None
+                    if data.textbox != None:
+                        gr.Markdown(data.message, elem_classes=["dialog-message-tb"], scale=0)
+                        self.textbox = gr.Textbox(value=data.textbox, show_label=False, interactive=True)
+                    else:
+                        gr.Markdown(data.message, elem_classes=["dialog-message"], scale=0)
+
                     with gr.Row():
                         self.confirm_btn = gr.Button(
                             data.confirm_text, 
@@ -52,9 +60,13 @@ class ConfirmDialog:
                             ],
                         )
 
+                        inputs = data.confirm_inputs
+                        if self.textbox:
+                            inputs += [self.textbox]
+
                         self.confirm_btn.click(
                             fn=data.confirm_execute,
-                            inputs=data.confirm_inputs,
+                            inputs=inputs,
                             outputs=data.confirm_outputs,
                         ).success(
                             fn=lambda: gr.update(visible=False),
@@ -76,6 +88,7 @@ class ConfirmDialog:
             self, 
             trigger: gr.Button, 
             # display data
+            textbox: str = None,
             message: str = "Are you sure?",
             confirm_text: str = "Confirm",
             cancel_text: str = "Cancel",
@@ -104,6 +117,7 @@ class ConfirmDialog:
             fn=lambda: (
                 ConfirmDialogData(
                     # display data
+                    textbox=textbox,
                     message=message, 
                     confirm_text=confirm_text,
                     cancel_text=cancel_text,

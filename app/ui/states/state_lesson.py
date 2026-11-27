@@ -273,6 +273,14 @@ class State_Lesson:
 
         sheet.save()
 
+    def rename_sheet(
+        self, 
+        sheet: Sheet,
+        new_name: str,
+    ):
+        new_path = sheet.excel_file_path.with_stem(new_name)
+        sheet.excel_file_path = sheet.excel_file_path.rename(new_path)
+
     def load_sheet(
         self, 
         lesson_name: str
@@ -380,6 +388,16 @@ class State_Lesson:
         path = PATH_LESSONS / f"{lesson_name}.json"
         if path.exists():
             path.unlink()
+
+    def rename_meta(
+        self, 
+        meta: Meta,
+        new_name: str,
+    ):  
+        self.delete_meta(meta.name)
+        meta.name = new_name
+        return self.save_meta(meta)
+
 
     def make_brief_meta(
         self, 

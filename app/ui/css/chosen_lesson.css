@@ -11,20 +11,24 @@
     gap: 5px;
 }
 
+#rename-btn {
+    min-height: 42px !important;
+}
+
 .lesson-title {
     max-height: fit-content;
     width: stretch !important;
     min-width: None;
 }
 
-.lesson-title p::before {
+/* .lesson-title p::before {
     content: "📖";
     font-size: 42px !important;
     line-height: 1;
     position: relative;
     top: -2px;
     margin-right: 5px;
-}
+} */
 
 .fav-title p::before {
     content: "🌟";
@@ -39,7 +43,7 @@
     overflow: hidden;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
-    line-height: 1;
+    line-height: 1.2;
 }
 
 .lesson-meta {
