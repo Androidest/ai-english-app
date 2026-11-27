@@ -11,6 +11,7 @@ from app.ui.states.state_lesson import State_Lesson, FAV_LESSON
 from app.utils.sheet import Sheet
 from app.workflow._core_.tts_config import TTSConfig
 from app.utils.paths import PATH_AUDIO
+from app.utils.tools import to_safe_filename
 
 ERROR_TEMPLATE = "<span style='color: #e39696; font-size: 18px;'>{msg}</span>"
 CORRECT_TEMPLATE = "<span style='color: #6ce38a; font-size: 35px;'>{msg}</span>"
@@ -503,7 +504,8 @@ class Tab_Lesson_Chosen:
             return
 
         model_config = tts_configs[cur_model]
-        filepath = PATH_AUDIO/f"{src_sentence}.{model_config.voice_id}.wav"
+        filename = to_safe_filename(src_sentence)
+        filepath = PATH_AUDIO/f"{filename}.{model_config.voice_id}.wav"
 
         if not filepath.exists() or regenerate:
             from app.workflow._core_.tts_runtime import TTSRuntime
