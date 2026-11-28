@@ -83,7 +83,7 @@ class Tab_AI:
 
                     with gr.Column():
                         # renders form fields
-                        with gr.Row():
+                        with gr.Row(elem_id="ai-params"):
                             input_style = "ai-input-editing" if item.editing else ""
                             base_config_type = state_manager.model_type
                             params = item.model_dump()
@@ -107,6 +107,9 @@ class Tab_AI:
 
                                     if options:
                                         input = gr.Dropdown(label=label, value=value, choices=options, elem_classes=active_style, elem_id=input_style, interactive=is_active)
+                                    elif field == "api_key":
+                                        buttons = ["copy"] if item.editing else []
+                                        input = gr.Textbox(label=label, value=value, elem_classes=active_style, elem_id=input_style, interactive=is_active, type="password", lines=1, buttons=buttons)
                                     else:
                                         input = gr.Textbox(label=label, value=value, elem_classes=active_style, elem_id=input_style, interactive=is_active)
                                     form_fields.append(input)

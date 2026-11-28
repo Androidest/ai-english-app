@@ -8,13 +8,13 @@ from app.ui.components.tab_ai import Tab_AI
 from app.ui.components.tab_lesson import Tab_Lesson
 from app.ui.dialogs.gen_lesson_dialog import GenLessonDialog
 from app.ui.dialogs.lesson_gen_info_dialog import LessonGenInfoDialog
-from app.utils.paths import PATH_CSS, PATH_JS
+from app.utils.paths import PATH_CSS, PATH_JS, PATH_DATA, PATH_AUDIO, PATH_ICONS
 
 class UIMain:
 
     def __init__(self):
         # main body
-        with gr.Blocks(fill_height=True) as self.body:
+        with gr.Blocks(fill_height=True, title="Sentence Forge", ) as self.body:
 
             # State Manages
             self.state_llm = State_LLM()
@@ -27,7 +27,8 @@ class UIMain:
             lesson_gen_info_dialog = LessonGenInfoDialog(state_lesson=self.state_lesson)
             
             with gr.Row():
-                gr.Markdown("# Sentence Forge", elem_classes=["main-title"], scale=1)
+                gr.Image(str(PATH_ICONS/'icon-no-bg.png'), elem_id="main-title-img", min_width=55, height=40, scale=0, container=False, buttons=[], interactive=False)
+                gr.Markdown("# Sentence Forge", elem_id="main-title", scale=1)
 
                 with gr.Row(elem_classes=["cur-ai"], scale=0):
                     gr.Textbox(value="LLM", elem_id="cur-ai-title", max_lines=1, scale=0, container=False)
@@ -95,15 +96,16 @@ class UIMain:
 
     def launch(
         self,
-        host: str,
+        url: str,
         port: int,
         share: bool = True,
         inbrowser: bool = True,
+        prevent_thread_lock = False,
     ):
         """
         Start the APP
         """
-        
+
         # load css
         css_paths = [
             file_path
@@ -118,12 +120,18 @@ class UIMain:
 
         # lauch
         self.body.launch(
-            server_name=host, 
+            server_name=url, 
             server_port=port, 
             inbrowser=inbrowser,
             css_paths=css_paths,
             js=external_js,
             share=share,
+            prevent_thread_lock=prevent_thread_lock, # Run launch in a background thread without blocking the main thread
+            allowed_paths=[
+                str(PATH_DATA), 
+                str(PATH_AUDIO),
+            ],
+            favicon_path=str(PATH_ICONS/'icon-64.ico'),
         )
 
     def on_change_cur_model(

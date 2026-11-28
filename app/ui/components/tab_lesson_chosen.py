@@ -65,6 +65,7 @@ class Tab_Lesson_Chosen:
                 )
 
                 if is_FAV_LESSON:
+                    rename = None # the `Favourite` lesson doesn't support renaming.
                     gr.Markdown(f"{meta.name}", scale=1, elem_classes=["lesson-title", "fav-title" ])
                 else:
                     with gr.Column(scale=0, min_width=40):
@@ -223,20 +224,21 @@ class Tab_Lesson_Chosen:
 
             s_words = gr.State(words)
 
-            confirm_dialog.attach(
-                trigger=rename,
+            if rename:
+                confirm_dialog.attach(
+                    trigger=rename,
 
-                textbox=meta.name,
-                
-                message=f"Rename current lesson",
-                confirm_text="Confirm",
-                cancel_text="Cancel",
-                danger=True,
+                    textbox=meta.name,
+                    
+                    message=f"Rename current lesson",
+                    confirm_text="Confirm",
+                    cancel_text="Cancel",
+                    danger=True,
 
-                confirm_fn=self.on_rename_lesson, 
-                confirm_inputs=[s_cur_meta, s_cur_sheet, state_lesson.metas],
-                confirm_outputs=[s_cur_meta, state_lesson.metas, state_lesson.cur_lesson], 
-            )
+                    confirm_fn=self.on_rename_lesson, 
+                    confirm_inputs=[s_cur_meta, s_cur_sheet, state_lesson.metas],
+                    confirm_outputs=[s_cur_meta, state_lesson.metas, state_lesson.cur_lesson], 
+                )
 
             # hint
             hint.click(
@@ -519,14 +521,14 @@ class Tab_Lesson_Chosen:
                 gr.skip(),
             )
             runtime.save_audio(data, filepath)
-            return
-
-        # switch between filepath and ndarray data to force the audio component to replay the content
-        yield (
-            gr.update(value=filepath, playback_position=0), 
-            gr.skip(),
-            gr.skip(),
-        )
+        else:
+            with open(filepath, "rb") as f:
+                data = f.read()
+            yield (
+                gr.update(value=data, playback_position=0), 
+                gr.skip(),
+                gr.skip(),
+            )
 
     def on_audio_pause(self):
         return (

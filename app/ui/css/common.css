@@ -1,10 +1,21 @@
-.main-title h1 {
+#main-title h1 {
     font-size: 35px !important;
     color: #6d80a0 !important;
 }
 
-.main-title{
+#main-title{
     max-height: fit-content;
     width: stretch !important;
     min-width: None;
+    margin: 0 !important;
+}
+
+#main-title-img{
+    min-width: None;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+footer {
+    display: none !important;
 }

@@ -18,7 +18,7 @@ if __name__ == "__main__":
     # launch the app
     app = UIMain()
     app.launch(
-        host=config.HOST, 
+        url=config.HOST, 
         port=config.PORT, 
         share=config.SHARE,
         inbrowser=True,
