@@ -1,0 +1,13 @@
+.empty-lesson-wrapper {
+    width: 100%;
+    height: 400px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.empty-lesson p {
+    text-align: center;
+    font-size: 30px !important;
+    color: #b3b3b3 !important;
+}

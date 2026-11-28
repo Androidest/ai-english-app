@@ -1,0 +1,1 @@
+import{Gt as e,Wt as t,ht as n,i as r}from"./index-C5ocWp53.js";import{n as i}from"./src-DeiGrqzX.js";import"./core-BXD5setz.js";var a=new Set([`$$slots`,`$$events`,`$$legacy`]);function o(o,s){e(s,!0);let c=new i(r(s,a));n(()=>{c.props.value&&c.dispatch(`change`)}),t()}export{o as default};
