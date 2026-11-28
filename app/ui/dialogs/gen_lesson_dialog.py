@@ -117,7 +117,8 @@ class GenLessonDialog:
                     label="Topic", 
                     placeholder="Your requirements for creating this lesson.", 
                     scale=1, 
-                    interactive=True
+                    interactive=True,
+                    elem_id="topic"
                 )
 
                 # Order matters here: The order of components must match the field declaration order in `LessonGenParams`.
@@ -136,7 +137,7 @@ class GenLessonDialog:
                     display_language_2,
                 ]
 
-                self.msg = gr.Markdown("", scale=0, elem_classes=["tip-msg"])
+                self.msg = gr.Textbox("", scale=0, elem_id="error-mgs", container=False, show_label=False)
                 progress_bar = ProgressBar(
                     height=10,
                     visible=False,
@@ -237,22 +238,22 @@ class GenLessonDialog:
         
         error = ""
         if llm_configs is None or cur_model >= len(llm_configs) or cur_model < 0:
-            error = ERROR_TEMPLATE.format(msg="AI is required!<br>Please add and chose one from the AI tab.")
+            error = "AI is required!\nPlease add and chose one from the AI tab."
 
         elif name == "":
-            error = ERROR_TEMPLATE.format(msg="`Name` is required!")
+            error = "`Name` is required!"
 
         elif name.lower() == FAV_LESSON.lower():
-            error = ERROR_TEMPLATE.format(msg="The name `Favourite` has already been used for special purpose.")
+            error = "The name `Favourite` has already been used for special purpose."
 
         elif (PATH_LESSONS / f"{name}.xlsx").exists():
-            error = ERROR_TEMPLATE.format(msg=f"Lesson with the name `{name}` already exists.")
+            error = f"Lesson with the name `{name}` already exists."
 
         # check for empty parameters
         param_dict = dict(zip(LESSON_GEN_PARAMS_ORDER, form_params))
         for k, v in param_dict.items():
             if v == None:
-                error = ERROR_TEMPLATE.format(msg=f"`{k}` is required!")
+                error = f"`{k}` is required!"
                 break
 
         # validate all generation parameters
@@ -261,7 +262,7 @@ class GenLessonDialog:
             gen_params = LessonGenParams(**param_dict)
             ok, errors = gen_params.validate()
             if not ok:
-                error = ERROR_TEMPLATE.format(msg=errors[0])
+                error = errors[0]
 
         if error == "":
             print(f"[Lesson Generator]")
@@ -299,7 +300,7 @@ class GenLessonDialog:
                 # validate the result
                 gen_data = workflow.last_state["final_items"]
                 if len(gen_data) != gen_req.target_count:
-                    raise Exception("[AI Generation error]<br>The count of generated sentences does not match the page count.")
+                    raise Exception("[AI Generation error]\nThe count of generated sentences does not match the page count.")
 
                 # convert the result data into sheet
                 sheet = self.state_lesson.build_sheet(
@@ -324,7 +325,7 @@ class GenLessonDialog:
                 await asyncio.sleep(1)
 
             except Exception as e:
-                error = ERROR_TEMPLATE.format(msg=str(e))
+                error = str(e)
                 # raise e
 
         yield self.build_on_generate_yields(progress=None, error=error, metas=metas)

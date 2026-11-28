@@ -1,4 +1,5 @@
 from typing import Any
+import re
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import Runnable
@@ -46,6 +47,30 @@ class LLMRuntime:
                 self._models[key] = init_chat_model(**model_kargs)
 
             return self._models[key]
+
+    def validate(self):
+        try:
+            model = self.get_model()
+            model.invoke("ping")
+        except Exception as e:
+            raise Exception(self._classify_invoke_error(e))
+
+    @staticmethod
+    def _classify_invoke_error(e: Exception) -> str:
+        name = type(e).__name__.lower()
+        msg = str(e)
+        low = msg.lower()
+
+        if "authentication" in name or "permission" in name or re.search(r"\b(401|403)\b", msg) \
+                or "invalid api key" in low or "incorrect api key" in low:
+            return "Invalid API key."
+        if "notfound" in name or re.search(r"\b404\b", msg) or "model not found" in low \
+                or "does not exist" in low:
+            return "Invalid model or url."
+        if "connection" in name or "timeout" in name or "connect" in low or "timeout" in low:
+            return "Timeout or Connection error! Please check the `Base Url` or your network."
+        
+        return msg
 
 if __name__ == "__main__":
     #region init LLMRuntime

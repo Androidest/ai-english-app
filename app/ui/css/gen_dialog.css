@@ -1,3 +1,36 @@
 .gen-dialog-panel {
     min-width: 800px !important;
 }
+
+#topic textarea {
+    height: auto !important;
+    max-height: 100px !important;
+    overflow-y: scroll !important;
+}
+
+#error-mgs textarea {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: 80px !important;   /* 规定的最大高度 */
+    overflow-y: scroll !important;
+    resize: none !important;
+    field-sizing: content;           /* 现代浏览器支持：自动按内容调整 */
+    margin-bottom: 15px !important;
+    color: rgb(230, 94, 94);
+}
+
+/* height=0 when empty content */
+#error-mgs:has(textarea:placeholder-shown) {
+    height: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+}
+
+#error-mgs:has(textarea:placeholder-shown) textarea {
+    height: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+}

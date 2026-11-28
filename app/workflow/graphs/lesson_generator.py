@@ -120,14 +120,16 @@ class LessonGenerator(WorkflowBase):
             user_id: str,
         ) -> dict[Literal["input", "context", "config"], any]:
             """Params for the invoke, ainvoke, stream ..."""
-    
+            runtime = LLMRuntime(config=llm_config)
+            runtime.validate()
+            
             return {
                 "input": LessonGeneratorState(
                     request=input
                 ),
                 "context": BasicWorkflowContext(
                     user_id=user_id,
-                    llm_runtime=LLMRuntime(config=llm_config),
+                    llm_runtime=runtime,
                 ),
                 "config": {
                     "configurable": { "thread_id": user_id },
