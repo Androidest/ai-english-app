@@ -10,7 +10,7 @@ __pycache__/
 .Python
 build/
 develop-eggs/
-dist/SentenceForge
+dist/
 downloads/
 eggs/
 .eggs/
