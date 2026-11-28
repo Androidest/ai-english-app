@@ -27,7 +27,7 @@ class UIMain:
             lesson_gen_info_dialog = LessonGenInfoDialog(state_lesson=self.state_lesson)
             
             with gr.Row():
-                gr.Markdown("# Zeenom Language Learner", elem_classes=["main-title"], scale=1)
+                gr.Markdown("# Sentence Forge", elem_classes=["main-title"], scale=1)
 
                 with gr.Row(elem_classes=["cur-ai"], scale=0):
                     gr.Textbox(value="LLM", elem_id="cur-ai-title", max_lines=1, scale=0, container=False)
